@@ -1,0 +1,20 @@
+local function _0x5f21()
+    local _0x1a2b = settings().Rendering
+    local _0x3c4d = workspace
+    _0x1a2b.QualityLevel = 1
+    game:GetService("Lighting").GlobalShadows = false
+    task.spawn(function()
+        while task.wait(0.01) do 
+            pcall(function()
+                for _, _0x9e8f in pairs(_0x3c4d:GetDescendants()) do
+                    if _0x9e8f:IsA("ClickDetector") then
+                        fireclickdetector(_0x9e8f)
+                    elseif _0x9e8f:IsA("ParticleEmitter") or _0x9e8f:IsA("Trail") then
+                        _0x9e8f.Enabled = false
+                    end
+                end
+            end)
+        end
+    end)
+end
+_0x5f21()
