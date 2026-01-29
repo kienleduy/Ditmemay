@@ -174,7 +174,7 @@ RandomTab:AddButton({
 
 -- [TAB MISC - AUTO NHẶT ITEM DROP (CLICK DETECTOR)]
 MiscTab:AddToggle({
-    Name = "Auto Nhặt Item 1000 Stud (0.3s)",
+    Name = "Auto Nhặt Item 100000 Stud (0.2s)",
     Default = false,
     Callback = function(state)
         getgenv().AutoCollectItems = state
@@ -191,7 +191,7 @@ MiscTab:AddToggle({
                         if cd then
                             local parentPart = cd.Parent
                             if parentPart:IsA("BasePart") then
-                                if (parentPart.Position - hrp.Position).Magnitude <= 1000 then
+                                if (parentPart.Position - hrp.Position).Magnitude <= 100000 then
                                     fireclickdetector(cd)
                                 end
                             end
@@ -201,13 +201,13 @@ MiscTab:AddToggle({
                         local touch = v:FindFirstChildWhichIsA("TouchInterest", true)
                         if touch then
                             local h = touch.Parent
-                            if h:IsA("BasePart") and (h.Position - hrp.Position).Magnitude <= 1000 then
+                            if h:IsA("BasePart") and (h.Position - hrp.Position).Magnitude <= 100000 then
                                 h.CFrame = hrp.CFrame
                             end
                         end
                     end
                 end)
-                task.wait(0.3) -- Tốc độ 0.3s theo yêu cầu
+                task.wait(0.1) -- Tốc độ 0.3s theo yêu cầu
             end
         end)
     end
