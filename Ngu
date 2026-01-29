@@ -1,6 +1,6 @@
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/jensonhirst/Orion/main/source')))()
 local Window = OrionLib:MakeWindow({
-    Name = "ALL-IN-ONE MENU",
+    Name = "ALL-IN-ONE MENU 👺",
     HidePremium = true,
     SaveConfig = false,
     IntroEnabled = false
@@ -10,7 +10,7 @@ local MainTab = Window:MakeTab({Name = "Main"})
 local QuestTab = Window:MakeTab({Name = "Auto Quest"})
 local SkillTab = Window:MakeTab({Name = "Auto Skill"})
 local FruitTab = Window:MakeTab({Name = "Fruit"})
-local RandomTab = Window:MakeTab({Name = "Random Fruit"})
+local RandomTab = Window:MakeTab({Name = "Random & Lucky"})
 local MiscTab = Window:MakeTab({Name = "Misc"})
 
 local LocalPlayer = game.Players.LocalPlayer
@@ -158,44 +158,59 @@ local function makeSkillToggle(tab, key)
 end
 for _, key in ipairs({"Z","X","C","V","B","N"}) do makeSkillToggle(SkillTab, key) end
 
--- [TAB FRUIT - STORE & EAT]
+-- [TAB FRUIT - STORE & EAT (TASK WAIT 0.2)]
 FruitTab:AddButton({
     Name = "STORE AND EAT (Cầm Fruit trên tay)",
     Callback = function()
         pcall(function()
             local Save = game:GetService("ReplicatedStorage"):WaitForChild("Save")
             local Tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+            
             Save:WaitForChild("SavingMelee"):FireServer(-5)
             Save:WaitForChild("SavingSword"):FireServer(-5)
-            if Tool and Tool.Name:lower():find("fruit") then Save:WaitForChild("SavingEvent"):FireServer(1) end
-            task.wait(0.2)
+            
+            if Tool and Tool.Name:lower():find("fruit") then 
+                Save:WaitForChild("SavingEvent"):FireServer(1) 
+            end
+            
+            task.wait(0.2) -- Chỉnh theo yêu cầu của ní
+            
             for _, Name in pairs({"BOXGUI", "ArmorBox", "DFGUI"}) do
                 local Gui = LocalPlayer.PlayerGui:FindFirstChild(Name)
-                if Gui and Gui.Frame:FindFirstChild("Sure") then Gui.Frame.Sure.EatScript.Eat:FireServer() end
+                if Gui and Gui.Frame:FindFirstChild("Sure") then 
+                    Gui.Frame.Sure.EatScript.Eat:FireServer() 
+                end
             end
         end)
     end
 })
 
--- [TAB RANDOM FRUIT]
+-- [TAB RANDOM & LUCKY SPIN]
 local rollAmount = 1
 RandomTab:AddTextbox({
-	Name = "Nhập số lượng Random",
+	Name = "Nhập số lượng (Spin / Lucky)",
 	Default = "1",
 	TextDisappear = false,
 	Callback = function(Value) rollAmount = tonumber(Value) or 1 end	  
 })
 RandomTab:AddButton({
-	Name = "Bắt đầu Random",
+	Name = "Bắt đầu Random Thường",
 	Callback = function()
 		local args = { { false, { Legendary = false, Common = false, Rare = false, Mythical = false, Secret = false }, rollAmount } }
 		pcall(function() LocalPlayer.PlayerGui.Random.Bright:FireServer(unpack(args)) end)
 	end
 })
+RandomTab:AddButton({
+	Name = "Bắt đầu Lucky Spin 👺",
+	Callback = function()
+		local args = { { true, { Legendary = false, Common = false, Rare = false, Mythical = false, Secret = false }, rollAmount } }
+		pcall(function() LocalPlayer.PlayerGui.Random.Bright:FireServer(unpack(args)) end)
+	end
+})
 
--- [TAB MISC]
+-- [TAB MISC - AUTO LỤM 0.1]
 MiscTab:AddToggle({
-    Name = "Auto lụm 100 Stud (An toàn)",
+    Name = "Auto lụm 100 Stud (Cực nhanh)",
     Default = false,
     Callback = function(state)
         getgenv().AutoCollect = state
@@ -212,7 +227,7 @@ MiscTab:AddToggle({
                         end
                     end
                 end)
-                task.wait(0.5)
+                task.wait(0.1) -- Chỉnh theo yêu cầu của ní
             end
         end)
     end
