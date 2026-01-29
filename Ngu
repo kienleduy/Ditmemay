@@ -168,7 +168,7 @@ FruitTab:AddButton({
             Save:WaitForChild("SavingMelee"):FireServer(-5)
             Save:WaitForChild("SavingSword"):FireServer(-5)
             if Tool and Tool.Name:lower():find("fruit") then Save:WaitForChild("SavingEvent"):FireServer(1) end
-            task.wait(0.3)
+            task.wait(0.2)
             for _, Name in pairs({"BOXGUI", "ArmorBox", "DFGUI"}) do
                 local Gui = LocalPlayer.PlayerGui:FindFirstChild(Name)
                 if Gui and Gui.Frame:FindFirstChild("Sure") then Gui.Frame.Sure.EatScript.Eat:FireServer() end
