@@ -14,42 +14,88 @@ local RandomTab = Window:MakeTab({Name = "Random & Lucky"})
 local MiscTab = Window:MakeTab({Name = "Misc"})
 
 local LocalPlayer = game.Players.LocalPlayer
-local killAuraEnabled = false
-local selectedTargetName = "Chưa chọn"
-local targetList = {"Chưa chọn", "Siu_Owner"}
-local dropdown
-
--- [HÀM HỖ TRỢ KILL AURA]
-local function refreshTargetList()
-    targetList = {"Chưa chọn", "Siu_Owner"}
-    local npcFolder = workspace:FindFirstChild("NPC DAMAGE")
-    if npcFolder then
-        for _, model in ipairs(npcFolder:GetChildren()) do
-            if model:IsA("Model") and model:FindFirstChildWhichIsA("Humanoid") then
-                if model.Name ~= "Siu_Owner" then table.insert(targetList, model.Name) end
-            end
-        end
-    end
-    if dropdown then dropdown:Refresh(targetList, true) end
-end
 
 local function killTarget(model)
     if not model then return end
     local hum = model:FindFirstChildWhichIsA("Humanoid")
     if hum and hum.Health > 0 then
         task.spawn(function()
-            for i = 1, 10 do 
+            for i = 1, 15 do
                 if hum.Health <= 0 then break end
                 pcall(function()
                     hum.Health = 0
-                    hum:TakeDamage(9e9)
+                    hum:TakeDamage(1e18)
                 end)
             end
         end)
     end
 end
 
--- [LOGIC AUTO QUEST]
+MainTab:AddToggle({
+    Name = "Auto Kill Siu Owner (Boss Spawn là Die)",
+    Default = false,
+    Callback = function(state)
+        getgenv().AutoKillSiu = state
+        task.spawn(function()
+            while getgenv().AutoKillSiu do
+                task.wait(0.1)
+                pcall(function()
+                    local boss = workspace:FindFirstChild("Siu_Owner")
+                    if boss then killTarget(boss) end
+                end)
+            end
+        end)
+    end
+})
+
+local selectedTargetName = "Chưa chọn"
+local targetList = {"Chưa chọn"}
+local dropdown
+
+local function refreshTargetList()
+    targetList = {"Chưa chọn"}
+    local npcFolder = workspace:FindFirstChild("NPC DAMAGE")
+    if npcFolder then
+        for _, model in ipairs(npcFolder:GetChildren()) do
+            if model:IsA("Model") and model:FindFirstChildWhichIsA("Humanoid") then
+                table.insert(targetList, model.Name)
+            end
+        end
+    end
+    if dropdown then dropdown:Refresh(targetList, true) end
+end
+
+MainTab:AddToggle({
+    Name = "Kill Aura Quái Chọn (Dropdown)",
+    Default = false,
+    Callback = function(state)
+        getgenv().KillSelected = state
+        task.spawn(function()
+            while getgenv().KillSelected do
+                task.wait(0.1)
+                pcall(function()
+                    if selectedTargetName ~= "Chưa chọn" then
+                        local npcFolder = workspace:FindFirstChild("NPC DAMAGE")
+                        if npcFolder then
+                            local target = npcFolder:FindFirstChild(selectedTargetName)
+                            if target then killTarget(target) end
+                        end
+                    end
+                end)
+            end
+        end)
+    end    
+})
+
+dropdown = MainTab:AddDropdown({
+    Name = "Chọn quái NPC DAMAGE",
+    Default = "Chưa chọn",
+    Options = targetList,
+    Callback = function(value) selectedTargetName = value end    
+})
+
+MainTab:AddButton({Name = "Làm mới danh sách quái", Callback = function() refreshTargetList() end})
+
 local SelectedQuest = ""
 local AutoQuestEnabled = false
 local QuestNPCs = {}
@@ -69,45 +115,13 @@ local function refreshQuestList()
 end
 refreshQuestList()
 
--- [TAB MAIN]
-MainTab:AddToggle({
-    Name = "Bật Kill Aura",
-    Default = false,
-    Callback = function(state)
-        killAuraEnabled = state
-        task.spawn(function()
-            while killAuraEnabled do
-                task.wait(0.1)
-                pcall(function() sethiddenproperty(LocalPlayer, "SimulationRadius", 1e12) end)
-                if selectedTargetName == "Siu_Owner" then
-                    local boss = workspace:FindFirstChild("Siu_Owner")
-                    if boss then killTarget(boss) end
-                else
-                    local npcFolder = workspace:FindFirstChild("NPC DAMAGE")
-                    if npcFolder then
-                        local target = npcFolder:FindFirstChild(selectedTargetName)
-                        if target then killTarget(target) end
-                    end
-                end
-            end
-        end)
-    end    
-})
-dropdown = MainTab:AddDropdown({
-    Name = "Chọn mục tiêu",
-    Default = "Chưa chọn",
-    Options = targetList,
-    Callback = function(value) selectedTargetName = value end    
-})
-MainTab:AddButton({Name = "Làm mới danh sách quái", Callback = function() refreshTargetList() end})
-
--- [TAB AUTO QUEST]
 QuestTab:AddDropdown({
     Name = "Chọn Quest NPC",
     Default = "Chưa chọn",
     Options = QuestNPCs,
     Callback = function(Value) SelectedQuest = Value end
 })
+
 QuestTab:AddToggle({
     Name = "Tự động nhận Quest",
     Default = false,
@@ -132,7 +146,6 @@ QuestTab:AddToggle({
     end
 })
 
--- [TAB AUTO SKILL]
 local function makeSkillToggle(tab, key)
     tab:AddToggle({
         Name = "Auto Skill " .. key,
@@ -158,34 +171,51 @@ local function makeSkillToggle(tab, key)
 end
 for _, key in ipairs({"Z","X","C","V","B","N"}) do makeSkillToggle(SkillTab, key) end
 
--- [TAB FRUIT - STORE & EAT (TASK WAIT 0.2)]
-FruitTab:AddButton({
-    Name = "STORE AND EAT (Cầm Fruit trên tay)",
-    Callback = function()
-        pcall(function()
-            local Save = game:GetService("ReplicatedStorage"):WaitForChild("Save")
-            local Tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
-            
-            Save:WaitForChild("SavingMelee"):FireServer(-5)
-            Save:WaitForChild("SavingSword"):FireServer(-5)
-            
-            if Tool and Tool.Name:lower():find("fruit") then 
-                Save:WaitForChild("SavingEvent"):FireServer(1) 
-            end
-            
-            task.wait(0.2) -- Chỉnh theo yêu cầu của ní
-            
-            for _, Name in pairs({"BOXGUI", "ArmorBox", "DFGUI"}) do
-                local Gui = LocalPlayer.PlayerGui:FindFirstChild(Name)
-                if Gui and Gui.Frame:FindFirstChild("Sure") then 
-                    Gui.Frame.Sure.EatScript.Eat:FireServer() 
-                end
+SkillTab:AddToggle({
+    Name = "Auto All Skills",
+    Default = false,
+    Callback = function(state)
+        getgenv().autoallskills = state
+        task.spawn(function()
+            while getgenv().autoallskills do
+                task.wait()
+                pcall(function()
+                    for _, v in pairs(LocalPlayer.Character:GetChildren()) do
+                        if v:IsA("Tool") then
+                            for _, key in ipairs({"Z","X","C","V","B","N"}) do
+                                local skillFolder = v:FindFirstChild(key)
+                                if skillFolder then
+                                    for _, c in pairs(skillFolder:GetChildren()) do
+                                        if c:IsA("RemoteEvent") then c:FireServer() end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end)
             end
         end)
     end
 })
 
--- [TAB RANDOM & LUCKY SPIN]
+FruitTab:AddButton({
+    Name = "STORE AND EAT (Cầm Fruit)",
+    Callback = function()
+        pcall(function()
+            local Save = game:GetService("ReplicatedStorage"):WaitForChild("Save")
+            local Tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+            Save:WaitForChild("SavingMelee"):FireServer(-5)
+            Save:WaitForChild("SavingSword"):FireServer(-5)
+            if Tool and Tool.Name:lower():find("fruit") then Save:WaitForChild("SavingEvent"):FireServer(1) end
+            task.wait(0.2)
+            for _, Name in pairs({"BOXGUI", "ArmorBox", "DFGUI"}) do
+                local Gui = LocalPlayer.PlayerGui:FindFirstChild(Name)
+                if Gui and Gui.Frame:FindFirstChild("Sure") then Gui.Frame.Sure.EatScript.Eat:FireServer() end
+            end
+        end)
+    end
+})
+
 local rollAmount = 1
 RandomTab:AddTextbox({
 	Name = "Nhập số lượng (Spin / Lucky)",
@@ -193,6 +223,7 @@ RandomTab:AddTextbox({
 	TextDisappear = false,
 	Callback = function(Value) rollAmount = tonumber(Value) or 1 end	  
 })
+
 RandomTab:AddButton({
 	Name = "Bắt đầu Random Thường",
 	Callback = function()
@@ -200,6 +231,7 @@ RandomTab:AddButton({
 		pcall(function() LocalPlayer.PlayerGui.Random.Bright:FireServer(unpack(args)) end)
 	end
 })
+
 RandomTab:AddButton({
 	Name = "Bắt đầu Lucky Spin 👺",
 	Callback = function()
@@ -208,9 +240,8 @@ RandomTab:AddButton({
 	end
 })
 
--- [TAB MISC - AUTO LỤM 0.1]
 MiscTab:AddToggle({
-    Name = "Auto lụm 100 Stud (Cực nhanh)",
+    Name = "Auto lụm 100 Stud (Siêu nhanh 0.1s)",
     Default = false,
     Callback = function(state)
         getgenv().AutoCollect = state
@@ -227,7 +258,7 @@ MiscTab:AddToggle({
                         end
                     end
                 end)
-                task.wait(0.1) -- Chỉnh theo yêu cầu của ní
+                task.wait(0.1)
             end
         end)
     end
