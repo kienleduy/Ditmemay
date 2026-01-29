@@ -173,47 +173,33 @@ local function makeSkillToggle(tab, key)
 end
 for _, key in ipairs({"Z","X","C","V","B","N"}) do makeSkillToggle(SkillTab, key) end
 
-SkillTab:AddToggle({
-    Name = "Auto All Skills",
-    Default = false,
-    Callback = function(state)
-        getgenv().autoallskills = state
-        task.spawn(function()
-            while getgenv().autoallskills do
-                task.wait()
-                pcall(function()
-                    for _, v in pairs(LocalPlayer.Character:GetChildren()) do
-                        if v:IsA("Tool") then
-                            for _, key in ipairs({"Z","X","C","V","B","N"}) do
-                                local skillFolder = v:FindFirstChild(key)
-                                if skillFolder then
-                                    for _, c in pairs(skillFolder:GetChildren()) do
-                                        if c:IsA("RemoteEvent") then c:FireServer() end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end)
-            end
-        end)
-    end
-})
-
--- [TAB FRUIT - STORE & EAT 0.2s]
+-- [TAB FRUIT - STORE & EAT CẬP NHẬT]
 FruitTab:AddButton({
     Name = "STORE AND EAT (Cầm Fruit trên tay)",
     Callback = function()
         pcall(function()
             local Save = game:GetService("ReplicatedStorage"):WaitForChild("Save")
             local Tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+            
+            -- Store
             Save:WaitForChild("SavingMelee"):FireServer(-5)
             Save:WaitForChild("SavingSword"):FireServer(-5)
-            if Tool and Tool.Name:lower():find("fruit") then Save:WaitForChild("SavingEvent"):FireServer(1) end
+            
+            if Tool and Tool.Name:lower():find("fruit") then
+                Save:WaitForChild("SavingEvent"):FireServer(1)
+            end
+            
             task.wait(0.2)
-            for _, Name in pairs({"BOXGUI", "ArmorBox", "DFGUI"}) do
+            
+            -- Eat (Cập nhật logic theo ní gửi)
+            local GuiNames = {"BOXGUI", "ArmorBox", "DFGUI"}
+            for _, Name in pairs(GuiNames) do
                 local Gui = LocalPlayer.PlayerGui:FindFirstChild(Name)
-                if Gui and Gui.Frame:FindFirstChild("Sure") then Gui.Frame.Sure.EatScript.Eat:FireServer() end
+                if Gui and Gui:FindFirstChild("Frame") and Gui.Frame:FindFirstChild("Sure") then
+                    if Gui.Frame.Sure:FindFirstChild("EatScript") then
+                        Gui.Frame.Sure.EatScript.Eat:FireServer()
+                    end
+                end
             end
         end)
     end
@@ -227,6 +213,7 @@ RandomTab:AddTextbox({
 	TextDisappear = false,
 	Callback = function(Value) rollAmount = tonumber(Value) or 1 end	  
 })
+
 RandomTab:AddButton({
 	Name = "Bắt đầu Random Thường",
 	Callback = function()
@@ -234,6 +221,7 @@ RandomTab:AddButton({
 		pcall(function() LocalPlayer.PlayerGui.Random.Bright:FireServer(unpack(args)) end)
 	end
 })
+
 RandomTab:AddButton({
 	Name = "Bắt đầu Lucky Spin 👺",
 	Callback = function()
@@ -242,14 +230,14 @@ RandomTab:AddButton({
 	end
 })
 
--- [TAB MISC - AUTO LỤM 1000ST + ANTI-SHOP]
+-- [TAB MISC - AUTO LỤM 1000ST + XÓA CLICK SHOP]
 MiscTab:AddToggle({
-    Name = "Auto Lụm 1000 Stud (Anti-Shop)",
+    Name = "Auto Lụm 1000 Stud (Xóa Click Shop)",
     Default = false,
     Callback = function(state)
         getgenv().AutoCollect = state
         
-        -- Xóa sạch ClickDetector trong MAP khi bật
+        -- Xóa ClickDetector trong MAP
         if state then
             pcall(function()
                 local mapFolder = workspace:FindFirstChild("MAP") or workspace:FindFirstChild("Map")
@@ -267,12 +255,12 @@ MiscTab:AddToggle({
                     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     if not hrp then return end
                     for _, v in pairs(workspace:GetChildren()) do
-                        -- Hút đồ rơi (Item, Fruit)
+                        -- Hút đồ rơi
                         local h = v:IsA("BasePart") and v or (v:IsA("Model") and (v:FindFirstChild("Handle") or v:FindFirstChildOfClass("BasePart")))
                         if h and h:FindFirstChild("TouchInterest") then
                             if (h.Position - hrp.Position).Magnitude <= 1000 then h.CFrame = hrp.CFrame end
                         end
-                        -- Click đồ (Đã xóa click shop nên an tâm)
+                        -- Click đồ Boss (Map đã bị xóa click nên an toàn)
                         for _, c in pairs(v:GetDescendants()) do
                             if c:IsA("ClickDetector") and c.Parent:IsA("BasePart") then
                                 if (c.Parent.Position - hrp.Position).Magnitude <= 1000 then fireclickdetector(c) end
@@ -280,7 +268,7 @@ MiscTab:AddToggle({
                         end
                     end
                 end)
-                task.wait(0.3) -- Tốc độ 0.3s theo yêu cầu
+                task.wait(0.3)
             end
         end)
     end
