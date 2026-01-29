@@ -51,7 +51,7 @@ end
 
 -- [TAB MAIN - KILL AURA]
 MainTab:AddToggle({
-    Name = "Kích hoạt Kill Aura (Siu & NPC)",
+    Name = "Kích hoạt Kill Aura (Siu và NPC)",
     Default = false,
     Callback = function(state)
         killAuraEnabled = state
