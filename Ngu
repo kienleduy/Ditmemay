@@ -7,6 +7,7 @@ local Window = OrionLib:MakeWindow({
 })
 
 local MainTab = Window:MakeTab({Name = "Main"})
+local QuestTab = Window:MakeTab({Name = "Auto Quest"})
 local SkillTab = Window:MakeTab({Name = "Auto Skill"})
 local FruitTab = Window:MakeTab({Name = "Fruit"})
 local RandomTab = Window:MakeTab({Name = "Random & Lucky"})
@@ -87,10 +88,62 @@ dropdown = MainTab:AddDropdown({
     Options = targetList,
     Callback = function(value) selectedTargetName = value end    
 })
-
 MainTab:AddButton({Name = "Làm mới danh sách quái", Callback = function() refreshTargetList() end})
 
--- [TAB AUTO SKILL - ĐÃ QUAY TRỞ LẠI]
+-- [TAB AUTO QUEST - ĐÃ QUAY LẠI]
+local SelectedQuest = ""
+local AutoQuestEnabled = false
+local QuestNPCs = {}
+local function refreshQuestList()
+    QuestNPCs = {}
+    pcall(function()
+        if workspace:FindFirstChild("NPCS") then
+            for _, v in pairs(workspace.NPCS:GetChildren()) do
+                if v:FindFirstChild("ClickPart") then table.insert(QuestNPCs, v.Name) end
+            end
+        end
+        local Kaido = workspace:FindFirstChild("Map-Islands") and workspace["Map-Islands"]:FindFirstChild("Kaido Island [ Lv 1000+ ]")
+        if Kaido then
+            for _, v in pairs(Kaido:GetChildren()) do
+                if v.Name:find("QUEST") then table.insert(QuestNPCs, v.Name) end
+            end
+        end
+    end)
+end
+refreshQuestList()
+
+QuestTab:AddDropdown({
+    Name = "Chọn NPC Nhiệm Vụ",
+    Default = "Chưa chọn",
+    Options = QuestNPCs,
+    Callback = function(Value) SelectedQuest = Value end
+})
+
+QuestTab:AddToggle({
+    Name = "Auto Nhận Nhiệm Vụ",
+    Default = false,
+    Callback = function(state)
+        AutoQuestEnabled = state
+        task.spawn(function()
+            while AutoQuestEnabled do
+                task.wait(0.5)
+                pcall(function()
+                    if SelectedQuest ~= "" then
+                        local TargetNPC = workspace.NPCS:FindFirstChild(SelectedQuest) or (workspace["Map-Islands"]["Kaido Island [ Lv 1000+ ]"] and workspace["Map-Islands"]["Kaido Island [ Lv 1000+ ]"]:FindFirstChild(SelectedQuest))
+                        if TargetNPC then
+                            local QuestTake = TargetNPC.ClickPart.QuestTake.QuestTake
+                            for _, remote in pairs(QuestTake:GetDescendants()) do
+                                if remote:IsA("RemoteEvent") then remote:FireServer() end
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+    end
+})
+
+-- [TAB AUTO SKILL]
 local function makeSkillToggle(tab, key)
     tab:AddToggle({
         Name = "Auto Skill " .. key,
@@ -116,33 +169,6 @@ local function makeSkillToggle(tab, key)
 end
 for _, key in ipairs({"Z","X","C","V","B","N"}) do makeSkillToggle(SkillTab, key) end
 
-SkillTab:AddToggle({
-    Name = "Auto All Skills",
-    Default = false,
-    Callback = function(state)
-        getgenv().autoallskills = state
-        task.spawn(function()
-            while getgenv().autoallskills do
-                task.wait()
-                pcall(function()
-                    for _, v in pairs(LocalPlayer.Character:GetChildren()) do
-                        if v:IsA("Tool") then
-                            for _, key in ipairs({"Z","X","C","V","B","N"}) do
-                                local skillFolder = v:FindFirstChild(key)
-                                if skillFolder then
-                                    for _, c in pairs(skillFolder:GetChildren()) do
-                                        if c:IsA("RemoteEvent") then c:FireServer() end
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end)
-            end
-        end)
-    end
-})
-
 -- [TAB FRUIT - STORE & EAT 4 GUI]
 FruitTab:AddButton({
     Name = "STORE AND EAT (DF, BOX, ARMOR, BOOK) 👺",
@@ -165,6 +191,21 @@ FruitTab:AddButton({
             end
         end)
     end
+})
+
+-- [TAB RANDOM & LUCKY SPIN]
+local rollAmount = 1
+RandomTab:AddTextbox({
+	Name = "Nhập số lượng Spin",
+	Default = "1",
+	Callback = function(Value) rollAmount = tonumber(Value) or 1 end	  
+})
+RandomTab:AddButton({
+	Name = "Lucky Spin 👺",
+	Callback = function()
+		local args = { { true, { Legendary = false, Common = false, Rare = false, Mythical = false, Secret = false }, rollAmount } }
+		pcall(function() LocalPlayer.PlayerGui.Random.Bright:FireServer(unpack(args)) end)
+	end
 })
 
 -- [TAB MISC - AUTO LỤM]
