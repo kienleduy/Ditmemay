@@ -1,0 +1,158 @@
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/jensonhirst/Orion/main/source')))()
+local Window = OrionLib:MakeWindow({
+    Name = "KILL AURA & AUTO SKILL",
+    HidePremium = true,
+    SaveConfig = false,
+    IntroEnabled = false
+})
+
+local MainTab = Window:MakeTab({Name = "Main"})
+local SkillTab = Window:MakeTab({Name = "Auto Skill"})
+
+local LocalPlayer = game.Players.LocalPlayer
+local killAuraEnabled = false
+local selectedTargetName = "Chưa chọn"
+local targetList = {"Chưa chọn", "Siu_Owner"}
+local dropdown
+
+local function refreshTargetList()
+    targetList = {"Chưa chọn", "Siu_Owner"}
+    local npcFolder = workspace:FindFirstChild("NPC DAMAGE")
+    if npcFolder then
+        for _, model in ipairs(npcFolder:GetChildren()) do
+            if model:IsA("Model") and model:FindFirstChildWhichIsA("Humanoid") then
+                if model.Name ~= "Siu_Owner" then
+                    table.insert(targetList, model.Name)
+                end
+            end
+        end
+    end
+    if dropdown then
+        dropdown:Refresh(targetList, true)
+    end
+end
+
+local function killTarget(model)
+    if not model then return end
+    local hum = model:FindFirstChildWhichIsA("Humanoid")
+    if hum and hum.Health > 0 then
+        task.spawn(function()
+            for i = 1, 10 do 
+                if hum.Health <= 0 then break end
+                pcall(function()
+                    hum.Health = 0
+                    hum:TakeDamage(9e9)
+                end)
+            end
+        end)
+    end
+end
+
+MainTab:AddToggle({
+    Name = "Bật Kill Aura",
+    Default = false,
+    Callback = function(state)
+        killAuraEnabled = state
+        if killAuraEnabled then
+            if selectedTargetName == "Chưa chọn" then return end
+            task.spawn(function()
+                while killAuraEnabled do
+                    task.wait(0.1)
+                    pcall(function()
+                        sethiddenproperty(LocalPlayer, "SimulationRadius", 1e12)
+                    end)
+                    if selectedTargetName == "Siu_Owner" then
+                        local boss = workspace:FindFirstChild("Siu_Owner")
+                        if boss then killTarget(boss) end
+                    else
+                        local npcFolder = workspace:FindFirstChild("NPC DAMAGE")
+                        if npcFolder then
+                            local target = npcFolder:FindFirstChild(selectedTargetName)
+                            if target then killTarget(target) end
+                        end
+                    end
+                end
+            end)
+        end
+    end    
+})
+
+dropdown = MainTab:AddDropdown({
+    Name = "Chọn mục tiêu",
+    Default = "Chưa chọn",
+    Options = targetList,
+    Callback = function(value)
+        selectedTargetName = value
+    end    
+})
+
+MainTab:AddButton({
+    Name = "Làm mới danh sách",
+    Callback = function()
+        refreshTargetList()
+    end    
+})
+
+local function makeSkillToggle(tab, key)
+    tab:AddToggle({
+        Name = "Auto Skill " .. key,
+        Default = false,
+        Callback = function(state)
+            getgenv()["autoskill" .. key:lower()] = state
+            task.spawn(function()
+                while getgenv()["autoskill" .. key:lower()] do
+                    task.wait()
+                    pcall(function()
+                        for _, v in pairs(LocalPlayer.Character:GetChildren()) do
+                            if v:IsA("Tool") and v:FindFirstChild(key) then
+                                for _, c in pairs(v[key]:GetChildren()) do
+                                    if c:IsA("RemoteEvent") then c:FireServer() end
+                                end
+                            end
+                        end
+                    end)
+                end
+            end)
+        end
+    })
+end
+
+for _, key in ipairs({"Z","X","C","V","B","N"}) do
+    makeSkillToggle(SkillTab, key)
+end
+
+SkillTab:AddToggle({
+    Name = "Auto All Skills",
+    Default = false,
+    Callback = function(state)
+        getgenv().autoallskills = state
+        task.spawn(function()
+            while getgenv().autoallskills do
+                task.wait()
+                pcall(function()
+                    for _, v in pairs(LocalPlayer.Character:GetChildren()) do
+                        if v:IsA("Tool") then
+                            for _, key in ipairs({"Z","X","C","V","B","N"}) do
+                                local skillFolder = v:FindFirstChild(key)
+                                if skillFolder then
+                                    for _, c in pairs(skillFolder:GetChildren()) do
+                                        if c:IsA("RemoteEvent") then c:FireServer() end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+    end
+})
+
+refreshTargetList()
+
+MainTab:AddButton({
+    Name = "Đóng GUI",
+    Callback = function()
+        OrionLib:Destroy()
+    end    
+})
