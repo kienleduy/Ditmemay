@@ -149,7 +149,7 @@ SkillTab:AddToggle({
     end
 })
 
-MiscTab:AddLabel("⚠️ LƯU Ý: Đừng lại gần chỗ có ClickDetector (Shop)!")
+MiscTab:AddLabel(" LƯU Ý: Đừng lại gần chỗ có ClickDetector (Shop)!")
 
 MiscTab:AddToggle({
     Name = "Auto nhặt 25 Stud (Tuyệt đối không lại gần Shop)",
