@@ -1,6 +1,6 @@
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/jensonhirst/Orion/main/source')))()
 local Window = OrionLib:MakeWindow({
-    Name = "KILL AURA & SKILL & COLLECT",
+    Name = "KILL AURA & SKILL & FRUIT",
     HidePremium = true,
     SaveConfig = false,
     IntroEnabled = false
@@ -8,6 +8,7 @@ local Window = OrionLib:MakeWindow({
 
 local MainTab = Window:MakeTab({Name = "Main"})
 local SkillTab = Window:MakeTab({Name = "Auto Skill"})
+local FruitTab = Window:MakeTab({Name = "Fruit"})
 local MiscTab = Window:MakeTab({Name = "Misc"})
 
 local LocalPlayer = game.Players.LocalPlayer
@@ -16,6 +17,7 @@ local selectedTargetName = "Chưa chọn"
 local targetList = {"Chưa chọn", "Siu_Owner"}
 local dropdown
 
+-- [HÀM HỖ TRỢ]
 local function refreshTargetList()
     targetList = {"Chưa chọn", "Siu_Owner"}
     local npcFolder = workspace:FindFirstChild("NPC DAMAGE")
@@ -49,6 +51,32 @@ local function killTarget(model)
     end
 end
 
+-- [HÀM BUG FRUIT]
+local function StoreAndEat()
+    pcall(function()
+        local Save = game:GetService("ReplicatedStorage"):WaitForChild("Save")
+        local Tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
+        
+        Save:WaitForChild("SavingMelee"):FireServer(-5)
+        Save:WaitForChild("SavingSword"):FireServer(-5)
+        
+        if Tool and Tool.Name:lower():find("fruit") then
+            Save:WaitForChild("SavingEvent"):FireServer(1)
+        end
+        
+        task.wait(0.2)
+        
+        local GuiNames = {"BOXGUI", "ArmorBox", "DFGUI"}
+        for _, Name in pairs(GuiNames) do
+            local Gui = LocalPlayer.PlayerGui:FindFirstChild(Name)
+            if Gui and Gui.Frame:FindFirstChild("Sure") then
+                Gui.Frame.Sure.EatScript.Eat:FireServer()
+            end
+        end
+    end)
+end
+
+-- [TAB MAIN]
 MainTab:AddToggle({
     Name = "Bật Kill Aura",
     Default = false,
@@ -59,9 +87,7 @@ MainTab:AddToggle({
             task.spawn(function()
                 while killAuraEnabled do
                     task.wait(0.1)
-                    pcall(function()
-                        sethiddenproperty(LocalPlayer, "SimulationRadius", 1e12)
-                    end)
+                    pcall(function() sethiddenproperty(LocalPlayer, "SimulationRadius", 1e12) end)
                     if selectedTargetName == "Siu_Owner" then
                         local boss = workspace:FindFirstChild("Siu_Owner")
                         if boss then killTarget(boss) end
@@ -82,18 +108,12 @@ dropdown = MainTab:AddDropdown({
     Name = "Chọn mục tiêu",
     Default = "Chưa chọn",
     Options = targetList,
-    Callback = function(value)
-        selectedTargetName = value
-    end    
+    Callback = function(value) selectedTargetName = value end    
 })
 
-MainTab:AddButton({
-    Name = "Làm mới danh sách",
-    Callback = function()
-        refreshTargetList()
-    end    
-})
+MainTab:AddButton({Name = "Làm mới danh sách", Callback = function() refreshTargetList() end})
 
+-- [TAB AUTO SKILL]
 local function makeSkillToggle(tab, key)
     tab:AddToggle({
         Name = "Auto Skill " .. key,
@@ -118,9 +138,7 @@ local function makeSkillToggle(tab, key)
     })
 end
 
-for _, key in ipairs({"Z","X","C","V","B","N"}) do
-    makeSkillToggle(SkillTab, key)
-end
+for _, key in ipairs({"Z","X","C","V","B","N"}) do makeSkillToggle(SkillTab, key) end
 
 SkillTab:AddToggle({
     Name = "Auto All Skills",
@@ -149,10 +167,30 @@ SkillTab:AddToggle({
     end
 })
 
-MiscTab:AddLabel(" LƯU Ý: Đừng lại gần chỗ có ClickDetector (Shop)!")
+-- [TAB FRUIT - BUG FRUIT]
+FruitTab:AddLabel("Cầm Fruit trên tay trước khi bấm!")
+FruitTab:AddButton({
+    Name = "BƯỚC 1: BẮT ĐẦU BUG",
+    Callback = function()
+        OrionLib:MakeNotification({
+            Name = "Xác nhận",
+            Content = "Nút SURE đã sẵn sàng, hãy bấm bên dưới!",
+            Time = 3
+        })
+    end
+})
 
+FruitTab:AddButton({
+    Name = "BƯỚC 2: XÁC NHẬN (SURE)",
+    Callback = function()
+        StoreAndEat()
+    end
+})
+
+-- [TAB MISC]
+MiscTab:AddLabel("⚠️ LƯU Ý: Đừng lại gần chỗ có ClickDetector (Shop)!")
 MiscTab:AddToggle({
-    Name = "Auto nhặt 100 Stud (Tuyệt đối không lại gần Shop)",
+    Name = "Auto nhặt 25 Stud (An toàn)",
     Default = false,
     Callback = function(state)
         getgenv().AutoCollect = state
@@ -164,12 +202,12 @@ MiscTab:AddToggle({
                     for _, v in pairs(workspace:GetChildren()) do
                         if v:IsA("BasePart") and v:FindFirstChild("TouchInterest") then
                             local dist = (v.Position - myHrp.Position).Magnitude
-                            if dist <= 100 then v.CFrame = myHrp.CFrame end
+                            if dist <= 25 then v.CFrame = myHrp.CFrame end
                         elseif v:IsA("Model") then
                             local handle = v:FindFirstChild("Handle") or v:FindFirstChildOfClass("BasePart")
                             if handle and handle:FindFirstChild("TouchInterest") then
                                 local dist = (handle.Position - myHrp.Position).Magnitude
-                                if dist <= 100 then handle.CFrame = myHrp.CFrame end
+                                if dist <= 25 then handle.CFrame = myHrp.CFrame end
                             end
                         end
                         for _, child in pairs(v:GetDescendants()) do
@@ -177,9 +215,7 @@ MiscTab:AddToggle({
                                 local parentPart = child.Parent
                                 if parentPart:IsA("BasePart") then
                                     local distance = (parentPart.Position - myHrp.Position).Magnitude
-                                    if distance <= 100 then 
-                                        fireclickdetector(child)
-                                    end
+                                    if distance <= 25 then fireclickdetector(child) end
                                 end
                             end
                         end
@@ -192,10 +228,4 @@ MiscTab:AddToggle({
 })
 
 refreshTargetList()
-
-MainTab:AddButton({
-    Name = "Đóng GUI",
-    Callback = function()
-        OrionLib:Destroy()
-    end    
-})
+MainTab:AddButton({Name = "Đóng GUI", Callback = function() OrionLib:Destroy() end})
