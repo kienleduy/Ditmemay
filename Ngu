@@ -1,6 +1,6 @@
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/jensonhirst/Orion/main/source')))()
 local Window = OrionLib:MakeWindow({
-    Name = "ALL-IN-ONE MENU 👺",
+    Name = "FIXED FULL - KHÔNG THIẾU CODE 👺",
     HidePremium = true,
     SaveConfig = false,
     IntroEnabled = false
@@ -19,7 +19,7 @@ local selectedTargetName = "Chưa chọn"
 local targetList = {"Chưa chọn", "Siu_Owner"}
 local dropdown
 
--- [HÀM KILL CHUẨN]
+-- [HÀM QUÉT NPC DAMAGE]
 local function refreshTargetList()
     targetList = {"Chưa chọn", "Siu_Owner"}
     local npcFolder = workspace:FindFirstChild("NPC DAMAGE")
@@ -33,82 +33,91 @@ local function refreshTargetList()
     if dropdown then dropdown:Refresh(targetList, true) end
 end
 
+-- [HÀM KILL TỪ XA]
 local function killTarget(model)
     if not model then return end
     local hum = model:FindFirstChildWhichIsA("Humanoid")
     if hum and hum.Health > 0 then
         task.spawn(function()
-            for i = 1, 10 do 
-                if hum.Health <= 0 then break end
-                pcall(function()
-                    hum.Health = 0
-                    hum:TakeDamage(9e9)
-                end)
+            pcall(function() sethiddenproperty(LocalPlayer, "SimulationRadius", 1e12) end)
+            for i = 1, 15 do 
+                if not model.Parent or hum.Health <= 0 then break end
+                hum.Health = 0
+                hum:TakeDamage(9e18)
             end
         end)
     end
 end
 
--- [TAB MAIN - KILL AURA]
+-- TAB MAIN - KILL AURA
 MainTab:AddToggle({
-    Name = "Kích hoạt Kill Aura (Siu và NPC)",
+    Name = "Bật Kill Aura (Xuyên Map)",
     Default = false,
     Callback = function(state)
         killAuraEnabled = state
-        if killAuraEnabled then
-            task.spawn(function()
-                while killAuraEnabled do
-                    task.wait(0.1)
-                    pcall(function() sethiddenproperty(LocalPlayer, "SimulationRadius", 1e12) end)
-                    if selectedTargetName == "Siu_Owner" then
-                        local boss = workspace:FindFirstChild("Siu_Owner")
-                        if boss then killTarget(boss) end
-                    else
-                        local npcFolder = workspace:FindFirstChild("NPC DAMAGE")
-                        if npcFolder then
-                            local target = npcFolder:FindFirstChild(selectedTargetName)
-                            if target then killTarget(target) end
-                        end
+        task.spawn(function()
+            while killAuraEnabled do
+                task.wait(0.1)
+                if selectedTargetName == "Siu_Owner" then
+                    local boss = workspace:FindFirstChild("Siu_Owner")
+                    if boss then killTarget(boss) end
+                else
+                    local npcFolder = workspace:FindFirstChild("NPC DAMAGE")
+                    if npcFolder and npcFolder:FindFirstChild(selectedTargetName) then
+                        killTarget(npcFolder[selectedTargetName])
                     end
                 end
-            end)
-        end
+            end
+        end)
     end    
 })
 dropdown = MainTab:AddDropdown({Name = "Chọn mục tiêu", Default = "Chưa chọn", Options = targetList, Callback = function(v) selectedTargetName = v end})
-MainTab:AddButton({Name = "Làm mới danh sách quái", Callback = function() refreshTargetList() end})
+MainTab:AddButton({Name = "Làm mới danh sách", Callback = function() refreshTargetList() end})
 
--- [TAB AUTO QUEST]
+-- TAB AUTO QUEST - FIX ỔN ĐỊNH HƠN
 local SelectedQuest = ""
-local AutoQuestEnabled = false
 local QuestNPCs = {}
-local function refreshQuestList()
+local function getQuests()
     QuestNPCs = {}
-    pcall(function()
-        if workspace:FindFirstChild("NPCS") then
-            for _, v in pairs(workspace.NPCS:GetChildren()) do
-                if v:FindFirstChild("ClickPart") then table.insert(QuestNPCs, v.Name) end
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v.Name == "QuestTake" and v:IsA("RemoteEvent") then
+            local npc = v.Parent.Parent.Parent
+            if npc and npc:IsA("Model") and not table.find(QuestNPCs, npc.Name) then 
+                table.insert(QuestNPCs, npc.Name) 
             end
         end
-    end)
+    end
 end
-refreshQuestList()
-QuestTab:AddDropdown({Name = "Chọn NPC Quest", Default = "Chưa chọn", Options = QuestNPCs, Callback = function(v) SelectedQuest = v end})
+getQuests()
+
+QuestTab:AddDropdown({
+    Name = "NPC Nhiệm Vụ",
+    Default = "Chưa chọn",
+    Options = QuestNPCs,
+    Callback = function(v) 
+        SelectedQuest = v 
+    end
+})
+
 QuestTab:AddToggle({
-    Name = "Auto Nhận Quest",
+    Name = "Auto Nhận Quest (Fix)",
     Default = false,
     Callback = function(state)
-        AutoQuestEnabled = state
+        getgenv().AutoTakeQuest = state
+        
         task.spawn(function()
-            while AutoQuestEnabled do
-                task.wait(0.5)
+            while getgenv().AutoTakeQuest do
+                task.wait(0.8)
+                
                 pcall(function()
-                    if SelectedQuest ~= "" then
-                        local npc = workspace.NPCS:FindFirstChild(SelectedQuest)
-                        if npc then
-                            local remote = npc.ClickPart.QuestTake.QuestTake:FindFirstChildOfClass("RemoteEvent")
-                            if remote then remote:FireServer() end
-                        end
+                    if SelectedQuest == "" or SelectedQuest == "Chưa chọn" then return end
+                    
+                    local npcModel = workspace:FindFirstChild(SelectedQuest, true)
+                    if not npcModel then return end
+                    
+                    local questRemote = npcModel:FindFirstChild("QuestTake", true)
+                    if questRemote and questRemote:IsA("RemoteEvent") then
+                        questRemote:FireServer()
                     end
                 end)
             end
@@ -116,7 +125,7 @@ QuestTab:AddToggle({
     end
 })
 
--- [TAB AUTO SKILL]
+-- TAB AUTO SKILL (giữ nguyên)
 local function makeSkillToggle(tab, key)
     tab:AddToggle({
         Name = "Auto Skill " .. key,
@@ -129,7 +138,9 @@ local function makeSkillToggle(tab, key)
                     pcall(function()
                         for _, v in pairs(LocalPlayer.Character:GetChildren()) do
                             if v:IsA("Tool") and v:FindFirstChild(key) then
-                                for _, c in pairs(v[key]:GetChildren()) do if c:IsA("RemoteEvent") then c:FireServer() end end
+                                for _, c in pairs(v[key]:GetChildren()) do 
+                                    if c:IsA("RemoteEvent") then c:FireServer() end 
+                                end
                             end
                         end
                     end)
@@ -140,7 +151,7 @@ local function makeSkillToggle(tab, key)
 end
 for _, key in ipairs({"Z","X","C","V","B","N"}) do makeSkillToggle(SkillTab, key) end
 
--- [TAB FRUIT - STORE & EAT 4 GUI]
+-- TAB FRUIT (giữ nguyên)
 FruitTab:AddButton({
     Name = "STORE AND EAT (4 GUI) 👺",
     Callback = function()
@@ -161,7 +172,7 @@ FruitTab:AddButton({
     end
 })
 
--- [TAB RANDOM & LUCKY SPIN]
+-- TAB RANDOM & LUCKY (giữ nguyên)
 local rollAmount = 1
 RandomTab:AddTextbox({Name = "Số lượng", Default = "1", Callback = function(v) rollAmount = tonumber(v) or 1 end})
 RandomTab:AddButton({
@@ -172,42 +183,42 @@ RandomTab:AddButton({
     end
 })
 
--- [TAB MISC - AUTO NHẶT ITEM DROP (CLICK DETECTOR)]
+-- TAB MISC - AUTO NHẶT DROP FIX (Box/Suit 100k stud)
 MiscTab:AddToggle({
-    Name = "Auto Nhặt Item 100000 Stud (0.2s)",
+    Name = "Auto Nhặt Drop (-Box / -Suit như Golden-Suit - 100k Stud)",
     Default = false,
     Callback = function(state)
-        getgenv().AutoCollectItems = state
+        getgenv().AutoCollectSpecialDrop = state
         task.spawn(function()
-            while getgenv().AutoCollectItems do
+            while getgenv().AutoCollectSpecialDrop do
                 pcall(function()
-                    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    local hrp = LocalPlayer.Character 
+                        and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     if not hrp then return end
-
-                    -- Quét toàn bộ Workspace để tìm ClickDetector (Dành cho item drop như MinhHammer-Box)
-                    for _, v in pairs(workspace:GetChildren()) do
-                        -- Kiểm tra nếu là Model hoặc Part rớt ra
-                        local cd = v:FindFirstChildWhichIsA("ClickDetector", true)
-                        if cd then
-                            local parentPart = cd.Parent
-                            if parentPart:IsA("BasePart") then
-                                if (parentPart.Position - hrp.Position).Magnitude <= 100000 then
-                                    fireclickdetector(cd)
-                                end
-                            end
-                        end
+                    
+                    for _, obj in ipairs(workspace:GetChildren()) do
+                        local objName = obj.Name
+                        local lowerName = objName:lower()
                         
-                        -- Vẫn giữ logic hút part có TouchInterest (Trái ác quỷ, item thường)
-                        local touch = v:FindFirstChildWhichIsA("TouchInterest", true)
-                        if touch then
-                            local h = touch.Parent
-                            if h:IsA("BasePart") and (h.Position - hrp.Position).Magnitude <= 100000 then
-                                h.CFrame = hrp.CFrame
+                        if (lowerName:find("box") or lowerName:find("suit") 
+                            or lowerName:match("%-box$") or lowerName:match("%-suit$")) 
+                            and (obj:IsA("Model") or obj:IsA("Part") or obj:IsA("Folder")) then
+                            
+                            local click = obj:FindFirstChildWhichIsA("ClickDetector", true)
+                            if click then
+                                local pos = obj:GetPivot() and obj:GetPivot().Position 
+                                    or (obj.PrimaryPart and obj.PrimaryPart.Position)
+                                    or (obj:IsA("BasePart") and obj.Position)
+                                
+                                if pos and (pos - hrp.Position).Magnitude <= 100000 then
+                                    fireclickdetector(click)
+                                    task.wait(0.03)
+                                end
                             end
                         end
                     end
                 end)
-                task.wait(0.1) -- Tốc độ 0.3s theo yêu cầu
+                task.wait(0.18)
             end
         end)
     end
