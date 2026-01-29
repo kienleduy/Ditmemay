@@ -51,7 +51,7 @@ end
 
 -- [TAB MAIN - KILL AURA]
 MainTab:AddToggle({
-    Name = "Kích hoạt Kill Aura",
+    Name = "Kích hoạt Kill Aura (Siu & NPC)",
     Default = false,
     Callback = function(state)
         killAuraEnabled = state
@@ -76,6 +76,7 @@ MainTab:AddToggle({
     end    
 })
 dropdown = MainTab:AddDropdown({Name = "Chọn mục tiêu", Default = "Chưa chọn", Options = targetList, Callback = function(v) selectedTargetName = v end})
+MainTab:AddButton({Name = "Làm mới danh sách quái", Callback = function() refreshTargetList() end})
 
 -- [TAB AUTO QUEST]
 local SelectedQuest = ""
@@ -87,12 +88,6 @@ local function refreshQuestList()
         if workspace:FindFirstChild("NPCS") then
             for _, v in pairs(workspace.NPCS:GetChildren()) do
                 if v:FindFirstChild("ClickPart") then table.insert(QuestNPCs, v.Name) end
-            end
-        end
-        local Kaido = workspace:FindFirstChild("Map-Islands") and workspace["Map-Islands"]:FindFirstChild("Kaido Island [ Lv 1000+ ]")
-        if Kaido then
-            for _, v in pairs(Kaido:GetChildren()) do
-                if v.Name:find("QUEST") then table.insert(QuestNPCs, v.Name) end
             end
         end
     end)
@@ -109,9 +104,9 @@ QuestTab:AddToggle({
                 task.wait(0.5)
                 pcall(function()
                     if SelectedQuest ~= "" then
-                        local TargetNPC = workspace.NPCS:FindFirstChild(SelectedQuest) or (workspace:FindFirstChild("Map-Islands") and workspace["Map-Islands"]["Kaido Island [ Lv 1000+ ]"] and workspace["Map-Islands"]["Kaido Island [ Lv 1000+ ]"]:FindFirstChild(SelectedQuest))
-                        if TargetNPC then
-                            local remote = TargetNPC.ClickPart.QuestTake.QuestTake:FindFirstChildOfClass("RemoteEvent")
+                        local npc = workspace.NPCS:FindFirstChild(SelectedQuest)
+                        if npc then
+                            local remote = npc.ClickPart.QuestTake.QuestTake:FindFirstChildOfClass("RemoteEvent")
                             if remote then remote:FireServer() end
                         end
                     end
@@ -166,7 +161,7 @@ FruitTab:AddButton({
     end
 })
 
--- [TAB RANDOM & LUCKY]
+-- [TAB RANDOM & LUCKY SPIN]
 local rollAmount = 1
 RandomTab:AddTextbox({Name = "Số lượng", Default = "1", Callback = function(v) rollAmount = tonumber(v) or 1 end})
 RandomTab:AddButton({
@@ -177,40 +172,42 @@ RandomTab:AddButton({
     end
 })
 
--- [TAB MISC - AUTO HÚT ITEM SIU CẤP 0.3S]
+-- [TAB MISC - AUTO NHẶT ITEM DROP (CLICK DETECTOR)]
 MiscTab:AddToggle({
-    Name = "Auto Hút Mọi Item 1000 Stud",
+    Name = "Auto Nhặt Item 1000 Stud (0.3s)",
     Default = false,
     Callback = function(state)
-        getgenv().AutoCollectFinal = state
+        getgenv().AutoCollectItems = state
         task.spawn(function()
-            while getgenv().AutoCollectFinal do
+            while getgenv().AutoCollectItems do
                 pcall(function()
                     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     if not hrp then return end
 
-                    -- Quét sạch mọi thứ có dấu hiệu nhặt được
-                    for _, v in pairs(workspace:GetDescendants()) do
-                        -- Giới hạn quét trong 1000 studs để tránh lag
-                        if v:IsA("TouchInterest") and v.Parent and v.Parent:IsA("BasePart") then
-                            local itemPart = v.Parent
-                            if (itemPart.Position - hrp.Position).Magnitude <= 1000 then
-                                -- Tránh hút quái hoặc player khác (thường quái không có TouchInterest kiểu này)
-                                if not itemPart:IsDescendantOf(LocalPlayer.Character) and not itemPart.Parent:FindFirstChildOfClass("Humanoid") then
-                                    itemPart.CFrame = hrp.CFrame
+                    -- Quét toàn bộ Workspace để tìm ClickDetector (Dành cho item drop như MinhHammer-Box)
+                    for _, v in pairs(workspace:GetChildren()) do
+                        -- Kiểm tra nếu là Model hoặc Part rớt ra
+                        local cd = v:FindFirstChildWhichIsA("ClickDetector", true)
+                        if cd then
+                            local parentPart = cd.Parent
+                            if parentPart:IsA("BasePart") then
+                                if (parentPart.Position - hrp.Position).Magnitude <= 1000 then
+                                    fireclickdetector(cd)
                                 end
                             end
                         end
                         
-                        -- Quét thêm ClickDetector cho item dạng Box (nhặt cho chắc)
-                        if v:IsA("ClickDetector") and v.Parent and v.Parent:IsA("BasePart") then
-                            if (v.Parent.Position - hrp.Position).Magnitude <= 1000 then
-                                fireclickdetector(v)
+                        -- Vẫn giữ logic hút part có TouchInterest (Trái ác quỷ, item thường)
+                        local touch = v:FindFirstChildWhichIsA("TouchInterest", true)
+                        if touch then
+                            local h = touch.Parent
+                            if h:IsA("BasePart") and (h.Position - hrp.Position).Magnitude <= 1000 then
+                                h.CFrame = hrp.CFrame
                             end
                         end
                     end
                 end)
-                task.wait(0.3)
+                task.wait(0.3) -- Tốc độ 0.3s theo yêu cầu
             end
         end)
     end
