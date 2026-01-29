@@ -76,9 +76,8 @@ MainTab:AddToggle({
     end    
 })
 dropdown = MainTab:AddDropdown({Name = "Chọn mục tiêu", Default = "Chưa chọn", Options = targetList, Callback = function(v) selectedTargetName = v end})
-MainTab:AddButton({Name = "Làm mới danh sách quái", Callback = function() refreshTargetList() end})
 
--- [TAB AUTO QUEST - ĐÃ GẮN LẠI]
+-- [TAB AUTO QUEST]
 local SelectedQuest = ""
 local AutoQuestEnabled = false
 local QuestNPCs = {}
@@ -99,16 +98,9 @@ local function refreshQuestList()
     end)
 end
 refreshQuestList()
-
-QuestTab:AddDropdown({
-    Name = "Chọn NPC Nhiệm Vụ",
-    Default = "Chưa chọn",
-    Options = QuestNPCs,
-    Callback = function(Value) SelectedQuest = Value end
-})
-
+QuestTab:AddDropdown({Name = "Chọn NPC Quest", Default = "Chưa chọn", Options = QuestNPCs, Callback = function(v) SelectedQuest = v end})
 QuestTab:AddToggle({
-    Name = "Auto Nhận Nhiệm Vụ",
+    Name = "Auto Nhận Quest",
     Default = false,
     Callback = function(state)
         AutoQuestEnabled = state
@@ -119,10 +111,8 @@ QuestTab:AddToggle({
                     if SelectedQuest ~= "" then
                         local TargetNPC = workspace.NPCS:FindFirstChild(SelectedQuest) or (workspace:FindFirstChild("Map-Islands") and workspace["Map-Islands"]["Kaido Island [ Lv 1000+ ]"] and workspace["Map-Islands"]["Kaido Island [ Lv 1000+ ]"]:FindFirstChild(SelectedQuest))
                         if TargetNPC then
-                            local QuestTake = TargetNPC.ClickPart.QuestTake.QuestTake
-                            for _, remote in pairs(QuestTake:GetDescendants()) do
-                                if remote:IsA("RemoteEvent") then remote:FireServer() end
-                            end
+                            local remote = TargetNPC.ClickPart.QuestTake.QuestTake:FindFirstChildOfClass("RemoteEvent")
+                            if remote then remote:FireServer() end
                         end
                     end
                 end)
@@ -183,27 +173,39 @@ RandomTab:AddButton({
     Name = "Lucky Spin 👺",
     Callback = function()
         local args = { { true, { Legendary = false, Common = false, Rare = false, Mythical = false, Secret = false }, rollAmount } }
-        pcall(function() LocalPlayer.PlayerGui.Random.Bright:FireServer(unpack(unpack(args))) end)
+        pcall(function() LocalPlayer.PlayerGui.Random.Bright:FireServer(unpack(args)) end)
     end
 })
 
--- [TAB MISC - AUTO HÚT ITEM (QUÁI & PLAYER DROP)]
+-- [TAB MISC - AUTO HÚT ITEM SIU CẤP 0.3S]
 MiscTab:AddToggle({
-    Name = "Auto Hút Item 1000 Stud (0.3s)",
+    Name = "Auto Hút Mọi Item 1000 Stud",
     Default = false,
     Callback = function(state)
-        getgenv().AutoSuckItems = state
+        getgenv().AutoCollectFinal = state
         task.spawn(function()
-            while getgenv().AutoSuckItems do
+            while getgenv().AutoCollectFinal do
                 pcall(function()
                     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     if not hrp then return end
 
-                    for _, v in pairs(workspace:GetChildren()) do
-                        local touch = v:FindFirstChildWhichIsA("TouchInterest", true)
-                        if touch and touch.Parent:IsA("BasePart") then
-                            if (touch.Parent.Position - hrp.Position).Magnitude <= 1000 then
-                                touch.Parent.CFrame = hrp.CFrame
+                    -- Quét sạch mọi thứ có dấu hiệu nhặt được
+                    for _, v in pairs(workspace:GetDescendants()) do
+                        -- Giới hạn quét trong 1000 studs để tránh lag
+                        if v:IsA("TouchInterest") and v.Parent and v.Parent:IsA("BasePart") then
+                            local itemPart = v.Parent
+                            if (itemPart.Position - hrp.Position).Magnitude <= 1000 then
+                                -- Tránh hút quái hoặc player khác (thường quái không có TouchInterest kiểu này)
+                                if not itemPart:IsDescendantOf(LocalPlayer.Character) and not itemPart.Parent:FindFirstChildOfClass("Humanoid") then
+                                    itemPart.CFrame = hrp.CFrame
+                                end
+                            end
+                        end
+                        
+                        -- Quét thêm ClickDetector cho item dạng Box (nhặt cho chắc)
+                        if v:IsA("ClickDetector") and v.Parent and v.Parent:IsA("BasePart") then
+                            if (v.Parent.Position - hrp.Position).Magnitude <= 1000 then
+                                fireclickdetector(v)
                             end
                         end
                     end
