@@ -152,7 +152,7 @@ SkillTab:AddToggle({
 MiscTab:AddLabel(" 🥀LƯU Ý: Đừng lại gần chỗ có ClickDetector (Shop)!")
 
 MiscTab:AddToggle({
-    Name = "Auto nhặt 25 Stud (Tuyệt đối không lại gần Shop)",
+    Name = "Auto nhặt 100 Stud (Tuyệt đối không lại gần Shop)",
     Default = false,
     Callback = function(state)
         getgenv().AutoCollect = state
@@ -164,12 +164,12 @@ MiscTab:AddToggle({
                     for _, v in pairs(workspace:GetChildren()) do
                         if v:IsA("BasePart") and v:FindFirstChild("TouchInterest") then
                             local dist = (v.Position - myHrp.Position).Magnitude
-                            if dist <= 25 then v.CFrame = myHrp.CFrame end
+                            if dist <= 100 then v.CFrame = myHrp.CFrame end
                         elseif v:IsA("Model") then
                             local handle = v:FindFirstChild("Handle") or v:FindFirstChildOfClass("BasePart")
                             if handle and handle:FindFirstChild("TouchInterest") then
                                 local dist = (handle.Position - myHrp.Position).Magnitude
-                                if dist <= 25 then handle.CFrame = myHrp.CFrame end
+                                if dist <= 100 then handle.CFrame = myHrp.CFrame end
                             end
                         end
                         for _, child in pairs(v:GetDescendants()) do
@@ -177,7 +177,7 @@ MiscTab:AddToggle({
                                 local parentPart = child.Parent
                                 if parentPart:IsA("BasePart") then
                                     local distance = (parentPart.Position - myHrp.Position).Magnitude
-                                    if distance <= 25 then 
+                                    if distance <= 100 then 
                                         fireclickdetector(child)
                                     end
                                 end
