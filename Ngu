@@ -247,7 +247,7 @@ MiscTab:AddButton({
 
 MiscTab:AddSection({ Name = "⚙️ Others" })
 
--- Toggle Auto Nhặt Item (phiên bản bạn yêu cầu, đã gắn)
+-- Toggle Auto Nhặt Item (giữ nguyên như bạn gửi)
 MiscTab:AddToggle({
     Name = "Auto Nhặt Item 100k Stud (Tránh MAP & NPCS)",
     Default = false,
@@ -266,7 +266,7 @@ MiscTab:AddToggle({
                         workspace:FindFirstChild("NPC DAMAGE")
                     }
 
-                    -- Loop GetChildren (các object trực tiếp trong workspace)
+                    -- Loop GetChildren
                     for _, obj in ipairs(workspace:GetChildren()) do
                         local isExcluded = false
                         for _, folder in ipairs(excludedFolders) do
@@ -277,7 +277,6 @@ MiscTab:AddToggle({
                         end
                         if isExcluded then continue end
 
-                        -- ClickDetector
                         local cds = obj:GetDescendants()
                         for _, cd in ipairs(cds) do
                             if cd:IsA("ClickDetector") then
@@ -288,13 +287,8 @@ MiscTab:AddToggle({
                                         pcall(fireclickdetector, cd)
                                     end
                                 end
-                            end
-                        end
-
-                        -- TouchInterest
-                        for _, touch in ipairs(cds) do
-                            if touch:IsA("TouchInterest") or touch:IsA("TouchTransmitter") then
-                                local touchPart = touch.Parent
+                            elseif cd:IsA("TouchInterest") or cd:IsA("TouchTransmitter") then
+                                local touchPart = cd.Parent
                                 if touchPart and touchPart:IsA("BasePart") then
                                     local dist = (touchPart.Position - hrp.Position).Magnitude
                                     if dist <= 100000 then
@@ -307,7 +301,7 @@ MiscTab:AddToggle({
                         end
                     end
 
-                    -- Loop GetDescendants (nếu item nằm sâu trong folder khác, nhưng vẫn exclude MAP/NPCS)
+                    -- Loop GetDescendants
                     for _, obj in ipairs(workspace:GetDescendants()) do
                         local isExcluded = false
                         for _, folder in ipairs(excludedFolders) do
@@ -349,8 +343,68 @@ MiscTab:AddToggle({
     end
 })
 
+-- Toggle mới: Auto Copy Armor
+MiscTab:AddToggle({
+    Name = "Auto Copy Armor (Fire Remote Armor)",
+    Default = false,
+    Callback = function(state)
+        getgenv().AutoArmor = state
+        
+        if state then
+            OrionLib:MakeNotification({
+                Name = "Auto Armor",
+                Content = "BẬT - Tự động copy/fire armor từ người khác",
+                Time = 4
+            })
+        else
+            OrionLib:MakeNotification({
+                Name = "Auto Armor",
+                Content = "TẮT",
+                Time = 3
+            })
+        end
+        
+        task.spawn(function()
+            while getgenv().AutoArmor do
+                task.wait(0.3)
+                safe(function()
+                    -- Cách 1: Tìm remote "Fire" có child "Armor" trong toàn bộ Players
+                    for _, descendant in pairs(Players:GetDescendants()) do
+                        if descendant:IsA("RemoteEvent") 
+                            and descendant.Name == "Fire" 
+                            and descendant:FindFirstChild("Armor") then
+                            descendant:FireServer()
+                        end
+                    end
+                    
+                    -- Cách 2: Kiểm tra trực tiếp trong Backpack/Character của tất cả người chơi
+                    for _, plr in pairs(Players:GetPlayers()) do
+                        if plr ~= LocalPlayer then  -- Bỏ qua bản thân để tránh lỗi
+                            for _, container in pairs({plr.Backpack, plr.Character}) do
+                                if container then
+                                    for _, item in pairs(container:GetChildren()) do
+                                        if item.Name:lower():find("armor") then
+                                            local k = item:FindFirstChild("K")
+                                            if k then
+                                                local fire = k:FindFirstChild("Fire")
+                                                if fire and fire:IsA("RemoteEvent") then
+                                                    fire:FireServer()
+                                                end
+                                            end
+                                        end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+    end
+})
+
 refreshTargetList()
 refreshQuestNPCList()
 OrionLib:Init()
 
-print("Menu loaded! Auto Nhặt Item đã được gắn - Tránh MAP & NPCS hoàn toàn.")
+print("Menu loaded! Auto Copy Armor đã được gắn vào Misc tab.")
