@@ -1,11 +1,7 @@
--- KILL AURA GỌP HẾT: Auto kill TẤT CẢ Humanoid (enemy + BOSS) trong NPC DAMAGE
--- Không cần nút riêng, Boss tự động bị kill khi bật toggle
--- Bypass mạnh: MaxHealth=0 + Health=-huge + TakeDamage + spam 50x
--- SimulationRadius max → kill xa không giới hạn
-
+-- JOUS MENU 👺 + KILL AURA TARGETED
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/jensonhirst/Orion/main/source')))()
 local Window = OrionLib:MakeWindow({
-    Name = "JOUS MENU 👺 + KILL AURA FULL",
+    Name = "JOUS MENU 👺 + KILL AURA",
     HidePremium = true,
     SaveConfig = true,
     ConfigFolder = "JousSettings",
@@ -29,7 +25,7 @@ frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 frame.BackgroundTransparency = 0.1
 frame.BorderSizePixel = 0
 frame.ZIndex = 1000
-frame.Visible = true -- Mặc định hiện
+frame.Visible = true
 
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
 
@@ -89,7 +85,6 @@ local MainTab = Window:MakeTab({Name = "Main"})
 local targetList = {"Siu_Owner"}
 local selectedNPC = "Siu_Owner"
 local killAuraEnabled = false
-local killAuraFullEnabled = false
 
 local function refreshNPC()
     targetList = {"Siu_Owner"}
@@ -129,95 +124,53 @@ MainTab:AddButton({
     end
 })
 
-MainTab:AddToggle({
-    Name = "Kill Aura (Selected NPC)",
-    Default = false,
-    Callback = function(state)
-        killAuraEnabled = state
-        task.spawn(function()
-            while killAuraEnabled do
-                task.wait(0.05)
-                pcall(function()
-                    sethiddenproperty(game.Players.LocalPlayer, "SimulationRadius", 1e12)
-                    local target = (selectedNPC == "Siu_Owner" and workspace:FindFirstChild("Siu_Owner")) or 
-                                  (workspace:FindFirstChild("NPC DAMAGE") and workspace["NPC DAMAGE"]:FindFirstChild(selectedNPC))
-                    if target and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 then
-                        target.Humanoid.Health = -9e9
-                    end
-                end)
-            end
-        end)
-    end
-})
-
--- Hàm kill siêu mạnh (dùng cho tất cả)
+-- Hàm kill mạnh
 local function killHumanoid(hum)
     if not hum or hum.Health <= 0 then return end
     
-    task.spawn(function()
-        for i = 1, 5 do -- Giảm từ 50 xuống 5 để giảm lag
-            if not hum.Parent then break end
-            pcall(function()
-                hum.Health = 0
-                hum.MaxHealth = 0
-                hum.Health = -math.huge
-                hum:ChangeState(Enum.HumanoidStateType.Dead)
-                hum:TakeDamage(1e9)
-            end)
-            task.wait()
-        end
+    pcall(function()
+        hum.Health = 0
+        hum.MaxHealth = 0
+        hum.Health = -math.huge
+        hum:ChangeState(Enum.HumanoidStateType.Dead)
+        hum:TakeDamage(1e9)
     end)
 end
 
--- Toggle Kill Aura Full (gộp hết: enemy + Boss tự động)
+-- Toggle Kill Aura (chỉ kill NPC đã chọn)
 MainTab:AddToggle({
-    Name = "🔥 Kill Aura FULL (All NPCs + Boss)",
+    Name = "🔥 Kill Aura (NPC đã chọn)",
     Default = false,
     Callback = function(state)
-        killAuraFullEnabled = state
+        killAuraEnabled = state
         
-        if killAuraFullEnabled then
+        if killAuraEnabled then
             OrionLib:MakeNotification({
-                Name = "KILL AURA FULL",
-                Content = "BẬT - Auto kill BOSS + mọi enemy trong NPC DAMAGE",
-                Time = 5
-            })
-        else
-            OrionLib:MakeNotification({
-                Name = "KILL AURA FULL",
-                Content = "TẮT",
+                Name = "KILL AURA",
+                Content = "BẬT - Kill aura " .. selectedNPC,
                 Time = 3
             })
         end
         
         task.spawn(function()
-            while killAuraFullEnabled do
-                task.wait(0.2) -- Tăng delay để giảm lag
+            while killAuraEnabled do
+                task.wait(0.1) -- Giảm lag
                 
-                -- Max sim radius (kill xa)
                 pcall(function()
                     sethiddenproperty(game.Players.LocalPlayer, "SimulationRadius", 1e12)
                     sethiddenproperty(game.Players.LocalPlayer, "MaxSimulationRadius", 1e12)
-                end)
-                
-                -- Kill Siu_Owner
-                local siu = workspace:FindFirstChild("Siu_Owner")
-                if siu and siu:FindFirstChild("Humanoid") then
-                    killHumanoid(siu.Humanoid)
-                end
-                
-                -- Kill NPC DAMAGE
-                local npcs = workspace:FindFirstChild("NPC DAMAGE")
-                if npcs then
-                    for _, model in ipairs(npcs:GetChildren()) do
-                        if model:IsA("Model") then
-                            local hum = model:FindFirstChildWhichIsA("Humanoid")
-                            if hum and hum.Health > 0 and model.Name ~= game.Players.LocalPlayer.Name then
-                                killHumanoid(hum)
-                            end
+                    
+                    -- Tìm NPC đã chọn
+                    local target = (selectedNPC == "Siu_Owner" and workspace:FindFirstChild("Siu_Owner")) or 
+                                  (workspace:FindFirstChild("NPC DAMAGE") and workspace["NPC DAMAGE"]:FindFirstChild(selectedNPC))
+                    
+                    if target and target:FindFirstChildWhichIsA("Humanoid") then
+                        local hum = target:FindFirstChildWhichIsA("Humanoid")
+                        if hum and hum.Health > 0 then
+                            killHumanoid(hum)
                         end
                     end
-                end
+                end)
             end
         end)
     end
@@ -231,18 +184,6 @@ PlayerTab:AddToggle({
     Default = true,
     Callback = function(state)
         frame.Visible = state
-    end
-})
-
-PlayerTab:AddSlider({
-    Name = "Khoảng cách Kill Aura",
-    Min = 50,
-    Max = 5000,
-    Default = 1000,
-    Color = Color3.fromRGB(255, 0, 0),
-    Increment = 50,
-    Callback = function(value)
-        getgenv().KillAuraDistance = value
     end
 })
 
@@ -425,12 +366,12 @@ MiscTab:AddButton({
     end
 })
 
--- Auto Nhặt Item SIÊU NHANH (ClickDetector Only) - ĐÃ TÍCH HỢP VÀO MENU
+-- Auto Nhặt Item TỐI ƯU (0.3s - không lag)
 MiscTab:AddToggle({
-    Name = "🔄 Auto Nhặt Item (ClickDetector)",
+    Name = "🔄 Auto Nhặt Item (Tối ưu)",
     Default = false,
     Callback = function(state)
-        getgenv().AutoCollectFast = state
+        getgenv().AutoCollectOptimized = state
         
         if state then
             OrionLib:MakeNotification({
@@ -441,35 +382,34 @@ MiscTab:AddToggle({
         end
         
         task.spawn(function()
-            while getgenv().AutoCollectFast do
-                pcall(function()
-                    -- Kiểm tra các folder cần bỏ qua
-                    local mapFolder = workspace:FindFirstChild("MAP")
-                    local npcsFolder = workspace:FindFirstChild("NPCS")
-                    local npcDamageFolder = workspace:FindFirstChild("NPC DAMAGE")
+            local lastRun = 0
+            while getgenv().AutoCollectOptimized do
+                local now = tick()
+                if now - lastRun >= 0.3 then -- Chỉ chạy mỗi 0.3s
+                    lastRun = now
                     
-                    -- Duyệt qua tất cả ClickDetector trong workspace
-                    for _, obj in ipairs(workspace:GetDescendants()) do
-                        if obj:IsA("ClickDetector") then
-                            local isExcluded = false
-                            
-                            -- Kiểm tra không thuộc các folder bị cấm
-                            if mapFolder and obj:IsDescendantOf(mapFolder) then
-                                isExcluded = true
-                            elseif npcsFolder and obj:IsDescendantOf(npcsFolder) then
-                                isExcluded = true
-                            elseif npcDamageFolder and obj:IsDescendantOf(npcDamageFolder) then
-                                isExcluded = true
-                            end
-                            
-                            -- Nếu không bị cấm thì fire ClickDetector
-                            if not isExcluded then
-                                fireclickdetector(obj)
+                    pcall(function()
+                        -- Lấy danh sách ClickDetector một lần
+                        local detectors = {}
+                        for _, obj in ipairs(workspace:GetDescendants()) do
+                            if obj:IsA("ClickDetector") then
+                                local parent = obj.Parent
+                                if parent and parent.Parent then
+                                    local parentName = parent.Parent.Name
+                                    if parentName ~= "MAP" and parentName ~= "NPCS" and parentName ~= "NPC DAMAGE" then
+                                        table.insert(detectors, obj)
+                                    end
+                                end
                             end
                         end
-                    end
-                end)
-                task.wait(0.05) -- Siêu nhanh
+                        
+                        -- Fire tất cả detector đã thu thập
+                        for _, detector in ipairs(detectors) do
+                            pcall(fireclickdetector, detector)
+                        end
+                    end)
+                end
+                task.wait(0.1) -- Kiểm tra mỗi 0.1s
             end
         end)
     end
@@ -477,7 +417,7 @@ MiscTab:AddToggle({
 
 OrionLib:Init()
 
-print("✅ JOUS MENU + KILL AURA FULL đã load!")
-print("🔥 Bật Kill Aura FULL để auto kill tất cả NPC + Boss")
-print("🔄 Tab Misc có Auto Nhặt Item mới (ClickDetector Only)")
+print("✅ JOUS MENU + KILL AURA đã load!")
+print("🎯 Chọn NPC trong dropdown rồi bật Kill Aura")
+print("🔄 Auto nhặt item tối ưu 0.3s")
 print("🎮 Tab Player có nút bật/tắt FPS HUD")
