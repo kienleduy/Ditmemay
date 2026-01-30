@@ -15,12 +15,18 @@ local MiscTab = Window:MakeTab({Name = "Misc"})
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
+
+-- Hàm safe (pcall)
+local function safe(func)
+    pcall(func)
+end
+
+-- [KILL AURA - KILL TỪ XA]
 local killAuraEnabled = false
 local selectedTargetName = "Chưa chọn"
 local targetList = {"Chưa chọn", "Siu_Owner"}
 local dropdown
 
--- [HÀM REFRESH DANH SÁCH QUÁI]
 local function refreshTargetList()
     targetList = {"Chưa chọn", "Siu_Owner"}
     local npcFolder = workspace:FindFirstChild("NPC DAMAGE")
@@ -37,15 +43,14 @@ local function refreshTargetList()
     OrionLib:MakeNotification({Name = "Refresh", Content = "Đã cập nhật danh sách quái!", Time = 3})
 end
 
--- [HÀM KILL MẠNH + KILL XA]
 local function killTarget(model)
     if not model then return end
     local hum = model:FindFirstChildWhichIsA("Humanoid")
     if hum and hum.Health > 0 then
         task.spawn(function()
-            for i = 1, 25 do  -- tăng số lần spam cho chắc ăn
+            for i = 1, 25 do
                 if hum.Health <= 0 then break end
-                pcall(function()
+                safe(function()
                     hum.Health = 0
                     hum.MaxHealth = 0
                     hum.Health = -math.huge
@@ -58,7 +63,6 @@ local function killTarget(model)
     end
 end
 
--- [KILL AURA - KILL XA NHỜ SIMULATION RADIUS]
 MainTab:AddToggle({
     Name = "Kích hoạt Kill Aura (Siu & NPC - Kill từ xa)",
     Default = false,
@@ -69,8 +73,7 @@ MainTab:AddToggle({
             task.spawn(function()
                 while killAuraEnabled do
                     task.wait(0.08)
-                    pcall(function()
-                        -- Tăng SimulationRadius cực đại để kill xa (không cần đứng gần)
+                    safe(function()
                         sethiddenproperty(LocalPlayer, "SimulationRadius", 1e12)
                         sethiddenproperty(LocalPlayer, "MaxSimulationRadius", 1e12)
                     end)
@@ -103,63 +106,78 @@ dropdown = MainTab:AddDropdown({
     end
 })
 
-MainTab:AddButton({
-    Name = "Làm mới danh sách quái",
-    Callback = function() refreshTargetList() end
-})
+MainTab:AddButton({Name = "Làm mới danh sách quái", Callback = function() refreshTargetList() end})
 
--- [AUTO QUEST - QUÉT workspace.NPCS]
-local SelectedQuest = ""
-local AutoQuestEnabled = false
-local QuestNPCs = {}
-
-local function refreshQuestList()
-    QuestNPCs = {}
-    pcall(function()
-        local npcsFolder = workspace:FindFirstChild("NPCS")
-        if npcsFolder then
-            for _, v in pairs(npcsFolder:GetChildren()) do
-                if v:FindFirstChild("ClickPart") then
-                    table.insert(QuestNPCs, v.Name)
-                end
-            end
-        end
-    end)
-end
-refreshQuestList()
-
-QuestTab:AddDropdown({
-    Name = "Chọn NPC Quest",
-    Default = "Chưa chọn",
-    Options = QuestNPCs,
-    Callback = function(v) SelectedQuest = v end
-})
+-- [AUTO QUEST - QUÉT GUI QuestTake và fire Accept0,1,2,3]
+local autoQuestEnabled = false
 
 QuestTab:AddToggle({
-    Name = "Auto Nhận Quest",
+    Name = "Auto Nhận Quest (Accept 0-3)",
     Default = false,
     Callback = function(state)
-        AutoQuestEnabled = state
+        autoQuestEnabled = state
+        
+        if autoQuestEnabled then
+            OrionLib:MakeNotification({
+                Name = "AUTO QUEST",
+                Content = "BẬT - Tự động nhận quest khi GUI QuestTake hiện",
+                Time = 4
+            })
+        else
+            OrionLib:MakeNotification({
+                Name = "AUTO QUEST",
+                Content = "TẮT",
+                Time = 3
+            })
+        end
+        
         task.spawn(function()
-            while AutoQuestEnabled do
-                task.wait(0.5)
-                pcall(function()
-                    if SelectedQuest ~= "" then
-                        local npc = workspace.NPCS:FindFirstChild(SelectedQuest)
-                        if npc and npc:FindFirstChild("ClickPart") then
-                            local remote = npc.ClickPart.QuestTake.QuestTake:FindFirstChildOfClass("RemoteEvent")
-                            if remote then remote:FireServer() end
+            while autoQuestEnabled do
+                task.wait(0.4)
+                
+                safe(function()
+                    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+                    local questGui = playerGui:FindFirstChild("QuestTake")
+                    
+                    if questGui then
+                        for i = 0, 3 do  -- quét Accept0 đến Accept3
+                            local acceptBtn = questGui:FindFirstChild("Accept" .. i)
+                            if acceptBtn then
+                                local remote = acceptBtn:FindFirstChildOfClass("RemoteEvent")
+                                if remote then
+                                    remote:FireServer()
+                                    task.wait(0.15)  -- delay nhỏ tránh spam quá nhanh
+                                end
+                            end
                         end
                     end
                 end)
             end
         end)
-    end
+    end    
 })
 
+-- Nút test nhận quest thủ công
 QuestTab:AddButton({
-    Name = "Làm mới danh sách NPC Quest",
-    Callback = function() refreshQuestList() end
+    Name = "Nhận Quest Ngay (1 lần)",
+    Callback = function()
+        safe(function()
+            local playerGui = LocalPlayer.PlayerGui
+            local questGui = playerGui:FindFirstChild("QuestTake")
+            if questGui then
+                for i = 0, 3 do
+                    local btn = questGui:FindFirstChild("Accept" .. i)
+                    if btn then
+                        local re = btn:FindFirstChildOfClass("RemoteEvent")
+                        if re then re:FireServer() end
+                    end
+                end
+                OrionLib:MakeNotification({Name = "Test", Content = "Đã thử nhận quest!", Time = 3})
+            else
+                OrionLib:MakeNotification({Name = "Không tìm thấy", Content = "GUI QuestTake chưa hiện", Time = 4})
+            end
+        end)
+    end    
 })
 
 -- [AUTO SKILL Z X C V B N]
@@ -172,7 +190,7 @@ local function makeSkillToggle(tab, key)
             task.spawn(function()
                 while getgenv()["autoskill" .. key:lower()] do
                     task.wait()
-                    pcall(function()
+                    safe(function()
                         for _, tool in pairs(LocalPlayer.Character:GetChildren()) do
                             if tool:IsA("Tool") then
                                 local skill = tool:FindFirstChild(key)
@@ -196,11 +214,11 @@ for _, key in ipairs({"Z","X","C","V","B","N"}) do
     makeSkillToggle(SkillTab, key)
 end
 
--- [FRUIT - STORE & EAT]
+-- [FRUIT STORE & EAT]
 FruitTab:AddButton({
     Name = "STORE AND EAT (4 GUI) 👺",
     Callback = function()
-        pcall(function()
+        safe(function()
             local Save = game:GetService("ReplicatedStorage"):WaitForChild("Save")
             local Tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
             Save:WaitForChild("SavingMelee"):FireServer(-5)
@@ -231,14 +249,14 @@ RandomTab:AddTextbox({
 RandomTab:AddButton({
     Name = "Lucky Spin 👺",
     Callback = function()
-        pcall(function()
+        safe(function()
             local args = { { true, { Legendary = false, Common = false, Rare = false, Mythical = false, Secret = false }, rollAmount } }
             LocalPlayer.PlayerGui.Random.Bright:FireServer(unpack(args))
         end)
     end
 })
 
--- [AUTO NHẶT ITEM - 100000 studs]
+-- [AUTO NHẶT ITEM 100k studs]
 MiscTab:AddToggle({
     Name = "Auto Nhặt Item 100k Stud (0.3s)",
     Default = false,
@@ -246,12 +264,11 @@ MiscTab:AddToggle({
         getgenv().AutoCollectItems = state
         task.spawn(function()
             while getgenv().AutoCollectItems do
-                pcall(function()
+                safe(function()
                     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     if not hrp then return end
 
                     for _, v in pairs(workspace:GetChildren()) do
-                        -- ClickDetector (item drop như box, hammer...)
                         local cd = v:FindFirstChildWhichIsA("ClickDetector", true)
                         if cd then
                             local parentPart = cd.Parent
@@ -260,7 +277,6 @@ MiscTab:AddToggle({
                             end
                         end
                         
-                        -- TouchInterest (trái ác quỷ, item khác)
                         local touch = v:FindFirstChildWhichIsA("TouchInterest", true)
                         if touch then
                             local h = touch.Parent
@@ -276,7 +292,7 @@ MiscTab:AddToggle({
     end
 })
 
--- Load lần đầu
+-- Load danh sách quái ban đầu
 refreshTargetList()
 
-print("Menu ALL-IN-ONE đã load! Kill Aura giờ kill từ xa được rồi.")
+print("Menu ALL-IN-ONE đã load xong! Auto Quest giờ quét Accept0 đến Accept3.")
