@@ -151,7 +151,7 @@ QuestTab:AddToggle({
         autoQuestNPCEnabled = state
         task.spawn(function()
             while autoQuestNPCEnabled do
-                task.wait(0.8)
+                task.wait(0.2)
                 safe(function()
                     local npc = workspace.NPCS:FindFirstChild(selectedQuestNPC)
                     local inner = npc.ClickPart.QuestTake.QuestTake
@@ -247,7 +247,7 @@ MiscTab:AddButton({
 
 MiscTab:AddSection({ Name = "⚙️ Others" })
 
--- Toggle Auto Nhặt Item (giữ nguyên như bạn gửi)
+-- Toggle Auto Nhặt Item (giữ nguyên)
 MiscTab:AddToggle({
     Name = "Auto Nhặt Item 100k Stud (Tránh MAP & NPCS)",
     Default = false,
@@ -259,14 +259,12 @@ MiscTab:AddToggle({
                     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     if not hrp then return end
 
-                    -- Exclude folders chính
                     local excludedFolders = {
                         workspace:FindFirstChild("MAP"),
                         workspace:FindFirstChild("NPCS"),
                         workspace:FindFirstChild("NPC DAMAGE")
                     }
 
-                    -- Loop GetChildren
                     for _, obj in ipairs(workspace:GetChildren()) do
                         local isExcluded = false
                         for _, folder in ipairs(excludedFolders) do
@@ -301,7 +299,6 @@ MiscTab:AddToggle({
                         end
                     end
 
-                    -- Loop GetDescendants
                     for _, obj in ipairs(workspace:GetDescendants()) do
                         local isExcluded = false
                         for _, folder in ipairs(excludedFolders) do
@@ -343,7 +340,7 @@ MiscTab:AddToggle({
     end
 })
 
--- Toggle mới: Auto Copy Armor
+-- Toggle Auto Copy Armor (giữ nguyên nếu có, hoặc bỏ nếu không cần)
 MiscTab:AddToggle({
     Name = "Auto Copy Armor (Fire Remote Armor)",
     Default = false,
@@ -368,7 +365,6 @@ MiscTab:AddToggle({
             while getgenv().AutoArmor do
                 task.wait(0.3)
                 safe(function()
-                    -- Cách 1: Tìm remote "Fire" có child "Armor" trong toàn bộ Players
                     for _, descendant in pairs(Players:GetDescendants()) do
                         if descendant:IsA("RemoteEvent") 
                             and descendant.Name == "Fire" 
@@ -377,9 +373,8 @@ MiscTab:AddToggle({
                         end
                     end
                     
-                    -- Cách 2: Kiểm tra trực tiếp trong Backpack/Character của tất cả người chơi
                     for _, plr in pairs(Players:GetPlayers()) do
-                        if plr ~= LocalPlayer then  -- Bỏ qua bản thân để tránh lỗi
+                        if plr ~= LocalPlayer then
                             for _, container in pairs({plr.Backpack, plr.Character}) do
                                 if container then
                                     for _, item in pairs(container:GetChildren()) do
@@ -403,8 +398,96 @@ MiscTab:AddToggle({
     end
 })
 
+-- Dropdown chọn quái từ NPC DAMAGE
+local selectedQuai = "Chưa chọn"
+local quaiList = {}
+
+local function refreshQuaiList()
+    quaiList = {"Chưa chọn"}
+    local npcFolder = workspace:FindFirstChild("NPC DAMAGE")
+    if npcFolder then
+        for _, quai in ipairs(npcFolder:GetChildren()) do
+            if quai:IsA("Model") and quai:FindFirstChild("HumanoidRootPart") then
+                table.insert(quaiList, quai.Name)
+            end
+        end
+    end
+end
+
+MiscTab:AddDropdown({
+    Name = "Chọn Quái để Teleport",
+    Default = "Chưa chọn",
+    Options = quaiList,
+    Callback = function(value)
+        selectedQuai = value
+    end    
+})
+
+MiscTab:AddButton({
+    Name = "Làm mới danh sách quái",
+    Callback = function()
+        refreshQuaiList()
+        OrionLib:MakeNotification({
+            Name = "Refresh Quái",
+            Content = "Đã cập nhật danh sách quái từ NPC DAMAGE!",
+            Time = 3
+        })
+    end    
+})
+
+MiscTab:AddButton({
+    Name = "Teleport đến Quái Đã Chọn",
+    Callback = function()
+        if selectedQuai == "Chưa chọn" then
+            OrionLib:MakeNotification({
+                Name = "Lỗi",
+                Content = "Chưa chọn quái nào!",
+                Time = 3
+            })
+            return
+        end
+        
+        local npcFolder = workspace:FindFirstChild("NPC DAMAGE")
+        if not npcFolder then return end
+        
+        local quai = npcFolder:FindFirstChild(selectedQuai)
+        if not quai or not quai:FindFirstChild("HumanoidRootPart") then
+            OrionLib:MakeNotification({
+                Name = "Lỗi",
+                Content = "Quái không tồn tại hoặc thiếu vị trí!",
+                Time = 3
+            })
+            return
+        end
+        
+        local playerChar = LocalPlayer.Character
+        if not playerChar or not playerChar:FindFirstChild("HumanoidRootPart") then
+            OrionLib:MakeNotification({
+                Name = "Lỗi",
+                Content = "Nhân vật chưa load!",
+                Time = 3
+            })
+            return
+        end
+        
+        -- Teleport
+        local hrp = playerChar.HumanoidRootPart
+        local targetCFrame = quai.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)  -- lên trên 5 stud
+        hrp.CFrame = targetCFrame
+        
+        OrionLib:MakeNotification({
+            Name = "Teleport",
+            Content = "Đã dịch chuyển đến " .. selectedQuai .. "!",
+            Time = 4
+        })
+    end    
+})
+
+-- Load ban đầu danh sách quái
+refreshQuaiList()
+
 refreshTargetList()
 refreshQuestNPCList()
 OrionLib:Init()
 
-print("Menu loaded! Auto Copy Armor đã được gắn vào Misc tab.")
+print("Menu loaded! Đã thêm dropdown + nút teleport đến quái trong Misc tab.")
