@@ -106,50 +106,67 @@ dropdown = MainTab:AddDropdown({
 
 MainTab:AddButton({Name = "Làm mới danh sách quái", Callback = function() refreshTargetList() end})
 
--- [AUTO QUEST - QUAY VỀ KIỂU CŨ: QUÉT GUI QuestTake, fire Accept0 & Accept1]
+-- [AUTO QUEST - GUI QuestTake kiểu cũ + Dropdown NPCS]
 local autoQuestEnabled = false
+local selectedQuestNPC = "Chưa chọn"
+local questNPCList = {"Chưa chọn"}
+local questDropdown
 
+local function refreshQuestNPCList()
+    questNPCList = {"Chưa chọn"}
+    
+    safe(function()
+        local npcsFolder = workspace:FindFirstChild("NPCS")
+        if npcsFolder then
+            for _, npc in ipairs(npcsFolder:GetChildren()) do
+                if npc:IsA("Model") and npc:FindFirstChild("ClickPart") then
+                    table.insert(questNPCList, npc.Name)
+                end
+            end
+        end
+    end)
+    
+    if questDropdown then questDropdown:Refresh(questNPCList, true) end
+    
+    OrionLib:MakeNotification({
+        Name = "Refresh NPC",
+        Content = "Đã quét: " .. (#questNPCList - 1) .. " NPC Quest Giver",
+        Time = 4
+    })
+end
+
+-- Toggle Auto Quest GUI kiểu cũ (Accept0 & Accept1)
 QuestTab:AddToggle({
-    Name = "Auto Nhận Quest (Accept 0 & 1)",
+    Name = "Auto Nhận Quest GUI (Accept 0 & 1)",
     Default = false,
     Callback = function(state)
         autoQuestEnabled = state
         
         if autoQuestEnabled then
             OrionLib:MakeNotification({
-                Name = "AUTO QUEST",
-                Content = "BẬT - Tự động nhận Accept0 & Accept1 khi GUI QuestTake hiện",
+                Name = "AUTO QUEST GUI",
+                Content = "BẬT - Fire Accept0 & Accept1 khi QuestTake hiện",
                 Time = 5
             })
         else
-            OrionLib:MakeNotification({
-                Name = "AUTO QUEST",
-                Content = "TẮT",
-                Time = 3
-            })
+            OrionLib:MakeNotification({Name = "AUTO QUEST GUI", Content = "TẮT", Time = 3})
         end
         
         task.spawn(function()
             while autoQuestEnabled do
-                task.wait(0.1)  -- delay 0.5s như bạn yêu cầu
+                task.wait(0.5)
                 
                 safe(function()
                     local playerGui = LocalPlayer:WaitForChild("PlayerGui")
                     local questGui = playerGui:FindFirstChild("QuestTake")
                     
                     if questGui then
-                        -- Fire Accept0 nếu có
-                        local accept0 = questGui:FindFirstChild("Accept0")
-                        if accept0 then
-                            local re0 = accept0:FindFirstChildOfClass("RemoteEvent")
-                            if re0 then re0:FireServer() end
-                        end
-                        
-                        -- Fire Accept1 nếu có
-                        local accept1 = questGui:FindFirstChild("Accept1")
-                        if accept1 then
-                            local re1 = accept1:FindFirstChildOfClass("RemoteEvent")
-                            if re1 then re1:FireServer() end
+                        for i = 0, 1 do  -- Accept0 & Accept1
+                            local acceptBtn = questGui:FindFirstChild("Accept" .. i)
+                            if acceptBtn then
+                                local remote = acceptBtn:FindFirstChildOfClass("RemoteEvent")
+                                if remote then remote:FireServer() end
+                            end
                         end
                     end
                 end)
@@ -158,36 +175,72 @@ QuestTab:AddToggle({
     end    
 })
 
--- Nút test thủ công Accept0 & Accept1
-QuestTab:AddButton({
-    Name = "Nhận Quest Ngay (Accept 0 & 1)",
-    Callback = function()
-        safe(function()
-            local playerGui = LocalPlayer.PlayerGui
-            local questGui = playerGui:FindFirstChild("QuestTake")
-            
-            if questGui then
-                local accept0 = questGui:FindFirstChild("Accept0")
-                if accept0 then
-                    local re0 = accept0:FindFirstChildOfClass("RemoteEvent")
-                    if re0 then re0:FireServer() end
-                end
-                
-                local accept1 = questGui:FindFirstChild("Accept1")
-                if accept1 then
-                    local re1 = accept1:FindFirstChildOfClass("RemoteEvent")
-                    if re1 then re1:FireServer() end
-                end
-                
-                OrionLib:MakeNotification({Name = "Test", Content = "Đã thử nhận Accept0 & Accept1", Time = 4})
-            else
-                OrionLib:MakeNotification({Name = "Không tìm thấy", Content = "GUI QuestTake chưa hiện", Time = 4})
+-- Toggle Auto Quest từ NPC chọn (fire Accept1 trong ClickPart.QuestTake.QuestTake.Accept1.RemoteEvent)
+local autoQuestNPCEnabled = false
+
+QuestTab:AddToggle({
+    Name = "Auto Nhận Quest từ NPC chọn",
+    Default = false,
+    Callback = function(state)
+        autoQuestNPCEnabled = state
+        
+        if autoQuestNPCEnabled then
+            if selectedQuestNPC == "Chưa chọn" then
+                OrionLib:MakeNotification({Name = "Cảnh báo", Content = "Chưa chọn NPC!", Time = 5})
+                autoQuestNPCEnabled = false
+                return
             end
-        end)
+            
+            OrionLib:MakeNotification({
+                Name = "AUTO QUEST NPC",
+                Content = "BẬT - Auto fire Accept1 từ: " .. selectedQuestNPC,
+                Time = 5
+            })
+            
+            task.spawn(function()
+                while autoQuestNPCEnabled do
+                    task.wait(0.8)
+                    
+                    safe(function()
+                        local npc = workspace.NPCS:FindFirstChild(selectedQuestNPC)
+                        if npc and npc:FindFirstChild("ClickPart") then
+                            local questTakeFolder = npc.ClickPart:FindFirstChild("QuestTake")
+                            if questTakeFolder then
+                                local questTakeInner = questTakeFolder:FindFirstChild("QuestTake")
+                                if questTakeInner then
+                                    local accept1 = questTakeInner:FindFirstChild("Accept1")
+                                    if accept1 then
+                                        local remote = accept1:FindFirstChildOfClass("RemoteEvent")
+                                        if remote then remote:FireServer() end
+                                    end
+                                end
+                            end
+                        end
+                    end)
+                end
+            end)
+        else
+            OrionLib:MakeNotification({Name = "AUTO QUEST NPC", Content = "TẮT", Time = 3})
+        end
     end    
 })
 
--- [AUTO SKILL giữ nguyên]
+questDropdown = QuestTab:AddDropdown({
+    Name = "Chọn NPC Quest Giver",
+    Default = "Chưa chọn",
+    Options = questNPCList,
+    Callback = function(value)
+        selectedQuestNPC = value
+        OrionLib:MakeNotification({Name = "Đã chọn", Content = "NPC: " .. value, Time = 4})
+    end    
+})
+
+QuestTab:AddButton({
+    Name = "Làm mới danh sách NPC",
+    Callback = function() refreshQuestNPCList() end    
+})
+
+-- [AUTO SKILL, FRUIT, LUCKY SPIN giữ nguyên]
 local function makeSkillToggle(tab, key)
     tab:AddToggle({
         Name = "Auto Skill " .. key,
@@ -221,7 +274,6 @@ for _, key in ipairs({"Z","X","C","V","B","N"}) do
     makeSkillToggle(SkillTab, key)
 end
 
--- [FRUIT giữ nguyên]
 FruitTab:AddButton({
     Name = "STORE AND EAT (4 GUI) 👺",
     Callback = function()
@@ -246,7 +298,6 @@ FruitTab:AddButton({
     end
 })
 
--- [LUCKY SPIN giữ nguyên]
 local rollAmount = 1
 RandomTab:AddTextbox({
     Name = "Số lượng roll",
@@ -276,12 +327,10 @@ MiscTab:AddToggle({
                     if not hrp then return end
                     
                     for _, obj in pairs(workspace:GetChildren()) do
-                        -- Bỏ qua các folder MAP, NPCS, NPC DAMAGE
                         if obj.Name == "MAP" or obj.Name == "NPCS" or obj.Name == "NPC DAMAGE" then
                             continue
                         end
                         
-                        -- ClickDetector
                         local cd = obj:FindFirstChildWhichIsA("ClickDetector", true)
                         if cd then
                             local parentPart = cd.Parent
@@ -290,7 +339,6 @@ MiscTab:AddToggle({
                             end
                         end
                         
-                        -- TouchInterest
                         local touch = obj:FindFirstChildWhichIsA("TouchInterest", true)
                         if touch then
                             local h = touch.Parent
@@ -300,7 +348,6 @@ MiscTab:AddToggle({
                         end
                     end
                     
-                    -- Quét sâu hơn (GetDescendants) nhưng loại trừ MAP & NPCS
                     for _, obj in pairs(workspace:GetDescendants()) do
                         if obj:IsDescendantOf(workspace.MAP) or obj:IsDescendantOf(workspace.NPCS) or obj:IsDescendantOf(workspace["NPC DAMAGE"]) then
                             continue
@@ -331,5 +378,6 @@ MiscTab:AddToggle({
 
 -- Load ban đầu
 refreshTargetList()
+refreshQuestNPCList()
 
-print("Menu ALL-IN-ONE updated! Auto Quest kiểu cũ (Accept0 & 1), Auto nhặt tránh MAP & NPCS.")
+print("Menu ALL-IN-ONE fixed! Auto Quest GUI cũ + Dropdown NPC + Auto nhặt tránh MAP/NPCS.")
