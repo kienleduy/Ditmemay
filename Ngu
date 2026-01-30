@@ -2,7 +2,8 @@ local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/jen
 local Window = OrionLib:MakeWindow({
     Name = "ALL-IN-ONE MENU 👺",
     HidePremium = true,
-    SaveConfig = false,
+    SaveConfig = true, -- Bật lưu cấu hình
+    ConfigFolder = "SiuMenuSettings", 
     IntroEnabled = false
 })
 
@@ -21,7 +22,7 @@ local function safe(func)
     pcall(func)
 end
 
--- [HÀM HỖ TRỢ KILL GỐC CỦA BẠN]
+-- [HÀM HỖ TRỢ KILL GỐC]
 local function killTarget(model)
     if not model then return end
     local hum = model:FindFirstChildWhichIsA("Humanoid")
@@ -42,7 +43,7 @@ local function killTarget(model)
     end
 end
 
--- [MAIN TAB - KILL AURA CŨ]
+-- [MAIN TAB - KILL AURA]
 local killAuraEnabled = false
 local selectedTargetName = "Chưa chọn"
 local targetList = {"Chưa chọn", "Siu_Owner"}
@@ -54,9 +55,7 @@ local function refreshTargetList()
     if npcFolder then
         for _, model in ipairs(npcFolder:GetChildren()) do
             if model:IsA("Model") and model:FindFirstChildWhichIsA("Humanoid") then
-                if model.Name ~= "Siu_Owner" then 
-                    table.insert(targetList, model.Name) 
-                end
+                if model.Name ~= "Siu_Owner" then table.insert(targetList, model.Name) end
             end
         end
     end
@@ -87,7 +86,6 @@ MainTab:AddToggle({
     end    
 })
 
--- [MAIN TAB - KILL AURA RAID UPDATE: WAVE 1-5 & CUTEBOSS]
 local raidAuraEnabled = false
 MainTab:AddToggle({
     Name = "🔥 Kill Aura RAID (Wave 1-5 & CuteBoss)",
@@ -99,22 +97,12 @@ MainTab:AddToggle({
                 task.wait(0.1)
                 safe(function()
                     sethiddenproperty(LocalPlayer, "SimulationRadius", 1e12)
-                    
-                    -- 1. Quét Wave 1-5 trong workspace
                     for i = 1, 5 do
                         local wave = workspace:FindFirstChild("Wave" .. i)
-                        if wave then
-                            for _, mob in ipairs(wave:GetChildren()) do
-                                killTarget(mob)
-                            end
-                        end
+                        if wave then for _, mob in ipairs(wave:GetChildren()) do killTarget(mob) end end
                     end
-                    
-                    -- 2. Quét CuteBoss trực tiếp trong workspace
                     local cb = workspace:FindFirstChild("CuteBoss")
                     if cb then killTarget(cb) end
-
-                    -- 3. Quét Boss trong RepStorage (Prisoner, CuteBoss dự phòng)
                     local raidFolder = game:GetService("ReplicatedStorage"):FindFirstChild("Npc-Mob,Boss Of Raid")
                     if raidFolder then
                         local p = raidFolder:FindFirstChild("Prisoner")
@@ -137,7 +125,7 @@ dropdown = MainTab:AddDropdown({
 
 MainTab:AddButton({Name = "Làm mới danh sách quái", Callback = function() refreshTargetList() end})
 
--- [QUEST TAB]
+-- [AUTO QUEST TAB]
 local autoQuestNPCEnabled = false
 local selectedQuestNPC = "Chưa chọn"
 local questNPCList = {"Chưa chọn"}
@@ -178,13 +166,15 @@ QuestTab:AddToggle({
 })
 
 questDropdown = QuestTab:AddDropdown({
-    Name = "Chọn NPC Quest",
+    Name = "Chọn NPC Quest Giver",
     Default = "Chưa chọn",
     Options = questNPCList,
     Callback = function(v) selectedQuestNPC = v end    
 })
 
--- [SKILL TAB]
+QuestTab:AddButton({Name = "Làm mới danh sách NPC", Callback = function() refreshQuestNPCList() end})
+
+-- [AUTO SKILL TAB]
 for _, key in ipairs({"Z","X","C","V","B","N"}) do
     SkillTab:AddToggle({
         Name = "Auto Skill " .. key,
@@ -243,13 +233,19 @@ RandomTab:AddButton({
 })
 
 -- [MISC TAB]
+MiscTab:AddSection({ Name = "💾 Settings" })
 MiscTab:AddButton({
-    Name = "✈️ Teleport sang Server Raid (18859789310)",
-    Callback = function()
-        game:GetService("TeleportService"):Teleport(18859789310, LocalPlayer)
-    end
+    Name = "Save Settings Now",
+    Callback = function() OrionLib:MakeNotification({Name = "Save", Content = "Cài đặt đã được lưu!", Time = 2}) end
 })
 
+MiscTab:AddSection({ Name = "🚀 Teleport" })
+MiscTab:AddButton({
+    Name = "✈️ Teleport sang Raid (18859789310)",
+    Callback = function() game:GetService("TeleportService"):Teleport(18859789310, LocalPlayer) end
+})
+
+MiscTab:AddSection({ Name = "⚙️ Others" })
 MiscTab:AddToggle({
     Name = "Auto Nhặt Item (100k Stud)",
     Default = false,
