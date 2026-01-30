@@ -106,8 +106,8 @@ dropdown = MainTab:AddDropdown({
 
 MainTab:AddButton({Name = "Làm mới danh sách quái", Callback = function() refreshTargetList() end})
 
--- [AUTO QUEST - GUI QuestTake kiểu cũ + Dropdown NPCS]
-local autoQuestEnabled = false
+-- [AUTO QUEST - Dropdown quét NPCS + fire Accept1 từ NPC chọn]
+local autoQuestNPCEnabled = false
 local selectedQuestNPC = "Chưa chọn"
 local questNPCList = {"Chưa chọn"}
 local questDropdown
@@ -135,51 +135,8 @@ local function refreshQuestNPCList()
     })
 end
 
--- Toggle Auto Quest GUI kiểu cũ (Accept0 & Accept1)
 QuestTab:AddToggle({
-    Name = "Auto Nhận Quest GUI (Accept 0 & 1)",
-    Default = false,
-    Callback = function(state)
-        autoQuestEnabled = state
-        
-        if autoQuestEnabled then
-            OrionLib:MakeNotification({
-                Name = "AUTO QUEST GUI",
-                Content = "BẬT - Fire Accept0 & Accept1 khi QuestTake hiện",
-                Time = 5
-            })
-        else
-            OrionLib:MakeNotification({Name = "AUTO QUEST GUI", Content = "TẮT", Time = 3})
-        end
-        
-        task.spawn(function()
-            while autoQuestEnabled do
-                task.wait(0.5)
-                
-                safe(function()
-                    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
-                    local questGui = playerGui:FindFirstChild("QuestTake")
-                    
-                    if questGui then
-                        for i = 0, 1 do  -- Accept0 & Accept1
-                            local acceptBtn = questGui:FindFirstChild("Accept" .. i)
-                            if acceptBtn then
-                                local remote = acceptBtn:FindFirstChildOfClass("RemoteEvent")
-                                if remote then remote:FireServer() end
-                            end
-                        end
-                    end
-                end)
-            end
-        end)
-    end    
-})
-
--- Toggle Auto Quest từ NPC chọn (fire Accept1 trong ClickPart.QuestTake.QuestTake.Accept1.RemoteEvent)
-local autoQuestNPCEnabled = false
-
-QuestTab:AddToggle({
-    Name = "Auto Nhận Quest từ NPC chọn",
+    Name = "Auto Nhận Quest từ NPC chọn (Accept1)",
     Default = false,
     Callback = function(state)
         autoQuestNPCEnabled = state
@@ -240,7 +197,7 @@ QuestTab:AddButton({
     Callback = function() refreshQuestNPCList() end    
 })
 
--- [AUTO SKILL, FRUIT, LUCKY SPIN giữ nguyên]
+-- [AUTO SKILL giữ nguyên]
 local function makeSkillToggle(tab, key)
     tab:AddToggle({
         Name = "Auto Skill " .. key,
@@ -274,6 +231,7 @@ for _, key in ipairs({"Z","X","C","V","B","N"}) do
     makeSkillToggle(SkillTab, key)
 end
 
+-- [FRUIT giữ nguyên]
 FruitTab:AddButton({
     Name = "STORE AND EAT (4 GUI) 👺",
     Callback = function()
@@ -298,6 +256,7 @@ FruitTab:AddButton({
     end
 })
 
+-- [LUCKY SPIN giữ nguyên]
 local rollAmount = 1
 RandomTab:AddTextbox({
     Name = "Số lượng roll",
@@ -326,6 +285,7 @@ MiscTab:AddToggle({
                     local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
                     if not hrp then return end
                     
+                    -- Quét GetChildren, skip MAP & NPCS
                     for _, obj in pairs(workspace:GetChildren()) do
                         if obj.Name == "MAP" or obj.Name == "NPCS" or obj.Name == "NPC DAMAGE" then
                             continue
@@ -348,6 +308,7 @@ MiscTab:AddToggle({
                         end
                     end
                     
+                    -- Quét GetDescendants, skip nếu nằm trong MAP/NPCS/NPC DAMAGE
                     for _, obj in pairs(workspace:GetDescendants()) do
                         if obj:IsDescendantOf(workspace.MAP) or obj:IsDescendantOf(workspace.NPCS) or obj:IsDescendantOf(workspace["NPC DAMAGE"]) then
                             continue
@@ -380,4 +341,4 @@ MiscTab:AddToggle({
 refreshTargetList()
 refreshQuestNPCList()
 
-print("Menu ALL-IN-ONE fixed! Auto Quest GUI cũ + Dropdown NPC + Auto nhặt tránh MAP/NPCS.")
+print("Menu ALL-IN-ONE fixed! Auto Quest GUI bỏ, giữ dropdown NPC, auto nhặt tránh MAP & NPCS.")
