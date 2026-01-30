@@ -87,10 +87,10 @@ MainTab:AddToggle({
     end    
 })
 
--- [MAIN TAB - KILL AURA RAID MỚI (DỰA TRÊN LOGIC TRÊN)]
+-- [MAIN TAB - KILL AURA RAID UPDATE: WAVE 1-5 & CUTEBOSS]
 local raidAuraEnabled = false
 MainTab:AddToggle({
-    Name = "🔥 Kill Aura RAID (Wave 1-5)",
+    Name = "🔥 Kill Aura RAID (Wave 1-5 & CuteBoss)",
     Default = false,
     Callback = function(state)
         raidAuraEnabled = state
@@ -99,7 +99,8 @@ MainTab:AddToggle({
                 task.wait(0.1)
                 safe(function()
                     sethiddenproperty(LocalPlayer, "SimulationRadius", 1e12)
-                    -- Quét Wave 1-5 trong workspace
+                    
+                    -- 1. Quét Wave 1-5 trong workspace
                     for i = 1, 5 do
                         local wave = workspace:FindFirstChild("Wave" .. i)
                         if wave then
@@ -108,7 +109,12 @@ MainTab:AddToggle({
                             end
                         end
                     end
-                    -- Quét Boss trong RepStorage
+                    
+                    -- 2. Quét CuteBoss trực tiếp trong workspace
+                    local cb = workspace:FindFirstChild("CuteBoss")
+                    if cb then killTarget(cb) end
+
+                    -- 3. Quét Boss trong RepStorage (Prisoner, CuteBoss dự phòng)
                     local raidFolder = game:GetService("ReplicatedStorage"):FindFirstChild("Npc-Mob,Boss Of Raid")
                     if raidFolder then
                         local p = raidFolder:FindFirstChild("Prisoner")
