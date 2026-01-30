@@ -1,18 +1,104 @@
+-- KILL AURA GỌP HẾT: Auto kill TẤT CẢ Humanoid (enemy + BOSS) trong NPC DAMAGE
+-- Không cần nút riêng, Boss tự động bị kill khi bật toggle
+-- Bypass mạnh: MaxHealth=0 + Health=-huge + TakeDamage + spam 50x
+-- SimulationRadius max → kill xa không giới hạn
+
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/jensonhirst/Orion/main/source')))()
-local Window = OrionLib:MakeWindow({Name = "JOUS MENU 👺", HidePremium = true, SaveConfig = true, ConfigFolder = "JousSettings", IntroEnabled = false})
+local Window = OrionLib:MakeWindow({
+    Name = "JOUS MENU 👺 + KILL AURA FULL",
+    HidePremium = true,
+    SaveConfig = true,
+    ConfigFolder = "JousSettings",
+    IntroEnabled = false
+})
+
+-- Mini FPS & Ping HUD
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+local gui = Instance.new("ScreenGui")
+gui.Name = "MiniFPSPing"
+gui.Parent = game.CoreGui
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 210, 0, 38)
+frame.AnchorPoint = Vector2.new(1, 0)
+frame.Position = UDim2.new(1, -10, 0, 10)
+frame.BackgroundColor3 = Color3.fromRGB(25,25,25)
+frame.BackgroundTransparency = 0.1
+frame.BorderSizePixel = 0
+frame.ZIndex = 1000
+frame.Visible = true -- Mặc định hiện
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+local dot = Instance.new("Frame", frame)
+dot.Size = UDim2.new(0, 9, 0, 9)
+dot.Position = UDim2.new(0, 10, 0.5, -4)
+dot.BackgroundColor3 = Color3.fromRGB(0,255,0)
+dot.BorderSizePixel = 0
+dot.ZIndex = 1001
+Instance.new("UICorner", dot).CornerRadius = UDim.new(1,0)
+
+local text = Instance.new("TextLabel", frame)
+text.Position = UDim2.new(0, 26, 0, 0)
+text.Size = UDim2.new(1, -30, 1, 0)
+text.BackgroundTransparency = 1
+text.TextXAlignment = Enum.TextXAlignment.Left
+text.TextYAlignment = Enum.TextYAlignment.Center
+text.Font = Enum.Font.GothamMedium
+text.TextSize = 13
+text.TextColor3 = Color3.fromRGB(255,255,255)
+text.Text = "JOUS HUB | FPS: 0 | Ping: 0 ms"
+text.ZIndex = 1001
+
+-- FPS & Ping logic
+local frames = 0
+local last = tick()
+
+RunService.RenderStepped:Connect(function()
+    frames += 1
+    if tick() - last >= 1 then
+        local fps = frames
+        frames = 0
+        last = tick()
+
+        local ping = math.floor(
+            Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+        )
+
+        if ping < 100 then
+            dot.BackgroundColor3 = Color3.fromRGB(0,255,0)
+        elseif ping < 200 then
+            dot.BackgroundColor3 = Color3.fromRGB(255,170,0)
+        else
+            dot.BackgroundColor3 = Color3.fromRGB(255,0,0)
+        end
+
+        text.Text = string.format(
+            "JOUS HUB | FPS: %d | Ping: %d ms",
+            fps,
+            ping
+        )
+    end
+end)
 
 -- [TAB MAIN - KILL & TP]
 local MainTab = Window:MakeTab({Name = "Main"})
 local targetList = {"Siu_Owner"}
 local selectedNPC = "Siu_Owner"
 local killAuraEnabled = false
+local killAuraFullEnabled = false
 
 local function refreshNPC()
     targetList = {"Siu_Owner"}
     local folder = workspace:FindFirstChild("NPC DAMAGE")
     if folder then
         for _, v in pairs(folder:GetChildren()) do
-            if v:IsA("Model") and v.Name ~= "Siu_Owner" then table.insert(targetList, v.Name) end
+            if v:IsA("Model") and v.Name ~= "Siu_Owner" then 
+                table.insert(targetList, v.Name) 
+            end
         end
     end
 end
@@ -34,7 +120,8 @@ MainTab:AddButton({
     Name = "Teleport tới Quái ✈️",
     Callback = function()
         pcall(function()
-            local target = (selectedNPC == "Siu_Owner" and workspace:FindFirstChild("Siu_Owner")) or (workspace:FindFirstChild("NPC DAMAGE") and workspace["NPC DAMAGE"]:FindFirstChild(selectedNPC))
+            local target = (selectedNPC == "Siu_Owner" and workspace:FindFirstChild("Siu_Owner")) or 
+                          (workspace:FindFirstChild("NPC DAMAGE") and workspace["NPC DAMAGE"]:FindFirstChild(selectedNPC))
             if target and target:FindFirstChild("HumanoidRootPart") then
                 game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
             end
@@ -43,7 +130,7 @@ MainTab:AddButton({
 })
 
 MainTab:AddToggle({
-    Name = "Kill Aura",
+    Name = "Kill Aura (Selected NPC)",
     Default = false,
     Callback = function(state)
         killAuraEnabled = state
@@ -52,13 +139,110 @@ MainTab:AddToggle({
                 task.wait(0.05)
                 pcall(function()
                     sethiddenproperty(game.Players.LocalPlayer, "SimulationRadius", 1e12)
-                    local target = (selectedNPC == "Siu_Owner" and workspace:FindFirstChild("Siu_Owner")) or (workspace:FindFirstChild("NPC DAMAGE") and workspace["NPC DAMAGE"]:FindFirstChild(selectedNPC))
+                    local target = (selectedNPC == "Siu_Owner" and workspace:FindFirstChild("Siu_Owner")) or 
+                                  (workspace:FindFirstChild("NPC DAMAGE") and workspace["NPC DAMAGE"]:FindFirstChild(selectedNPC))
                     if target and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0 then
                         target.Humanoid.Health = -9e9
                     end
                 end)
             end
         end)
+    end
+})
+
+-- Hàm kill siêu mạnh (dùng cho tất cả)
+local function killHumanoid(hum)
+    if not hum or hum.Health <= 0 then return end
+    
+    task.spawn(function()
+        for i = 1, 5 do -- Giảm từ 50 xuống 5 để giảm lag
+            if not hum.Parent then break end
+            pcall(function()
+                hum.Health = 0
+                hum.MaxHealth = 0
+                hum.Health = -math.huge
+                hum:ChangeState(Enum.HumanoidStateType.Dead)
+                hum:TakeDamage(1e9)
+            end)
+            task.wait()
+        end
+    end)
+end
+
+-- Toggle Kill Aura Full (gộp hết: enemy + Boss tự động)
+MainTab:AddToggle({
+    Name = "🔥 Kill Aura FULL (All NPCs + Boss)",
+    Default = false,
+    Callback = function(state)
+        killAuraFullEnabled = state
+        
+        if killAuraFullEnabled then
+            OrionLib:MakeNotification({
+                Name = "KILL AURA FULL",
+                Content = "BẬT - Auto kill BOSS + mọi enemy trong NPC DAMAGE",
+                Time = 5
+            })
+        else
+            OrionLib:MakeNotification({
+                Name = "KILL AURA FULL",
+                Content = "TẮT",
+                Time = 3
+            })
+        end
+        
+        task.spawn(function()
+            while killAuraFullEnabled do
+                task.wait(0.2) -- Tăng delay để giảm lag
+                
+                -- Max sim radius (kill xa)
+                pcall(function()
+                    sethiddenproperty(game.Players.LocalPlayer, "SimulationRadius", 1e12)
+                    sethiddenproperty(game.Players.LocalPlayer, "MaxSimulationRadius", 1e12)
+                end)
+                
+                -- Kill Siu_Owner
+                local siu = workspace:FindFirstChild("Siu_Owner")
+                if siu and siu:FindFirstChild("Humanoid") then
+                    killHumanoid(siu.Humanoid)
+                end
+                
+                -- Kill NPC DAMAGE
+                local npcs = workspace:FindFirstChild("NPC DAMAGE")
+                if npcs then
+                    for _, model in ipairs(npcs:GetChildren()) do
+                        if model:IsA("Model") then
+                            local hum = model:FindFirstChildWhichIsA("Humanoid")
+                            if hum and hum.Health > 0 and model.Name ~= game.Players.LocalPlayer.Name then
+                                killHumanoid(hum)
+                            end
+                        end
+                    end
+                end
+            end
+        end)
+    end
+})
+
+-- [TAB PLAYER]
+local PlayerTab = Window:MakeTab({Name = "Player"})
+
+PlayerTab:AddToggle({
+    Name = "Hiển thị FPS/Ping HUD",
+    Default = true,
+    Callback = function(state)
+        frame.Visible = state
+    end
+})
+
+PlayerTab:AddSlider({
+    Name = "Khoảng cách Kill Aura",
+    Min = 50,
+    Max = 5000,
+    Default = 1000,
+    Color = Color3.fromRGB(255, 0, 0),
+    Increment = 50,
+    Callback = function(value)
+        getgenv().KillAuraDistance = value
     end
 })
 
@@ -73,7 +257,9 @@ local function refreshQuestNPC()
     local folder = workspace:FindFirstChild("NPCS")
     if folder then
         for _, v in pairs(folder:GetChildren()) do
-            if v:IsA("Model") and v:FindFirstChild("ClickPart") then table.insert(questNPCList, v.Name) end
+            if v:IsA("Model") and v:FindFirstChild("ClickPart") then 
+                table.insert(questNPCList, v.Name) 
+            end
         end
     end
 end
@@ -128,7 +314,11 @@ for _, key in ipairs({"Z","X","C","V","B","N"}) do
                     pcall(function()
                         for _, t in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
                             if t:IsA("Tool") and t:FindFirstChild(key) then
-                                for _, r in pairs(t[key]:GetChildren()) do if r:IsA("RemoteEvent") then r:FireServer() end end
+                                for _, r in pairs(t[key]:GetChildren()) do 
+                                    if r:IsA("RemoteEvent") then 
+                                        r:FireServer() 
+                                    end 
+                                end
                             end
                         end
                     end)
@@ -138,7 +328,6 @@ for _, key in ipairs({"Z","X","C","V","B","N"}) do
     })
 end
 
--- Toggle Auto Armor mới gắn vào tab War
 WarTab:AddToggle({
     Name = "Auto Copy Armor (Fire Remote)",
     Default = false,
@@ -163,16 +352,14 @@ WarTab:AddToggle({
             while getgenv().AutoArmor do
                 task.wait(0.3)
                 pcall(function()
-                    -- Tìm và fire remote "Fire" có child "Armor"
                     for _, descendant in pairs(game.Players:GetDescendants()) do
-                        if descendant:IsA("RemoteEvent") 
-                            and descendant.Name == "Fire" 
+                        if descendant:IsA("RemoteEvent")
+                            and descendant.Name == "Fire"
                             and descendant:FindFirstChild("Armor") then
                             descendant:FireServer()
                         end
                     end
                     
-                    -- Kiểm tra trực tiếp trong Backpack/Character của tất cả người chơi
                     for _, plr in pairs(game.Players:GetPlayers()) do
                         if plr ~= game.Players.LocalPlayer then
                             for _, container in pairs({plr.Backpack, plr.Character}) do
@@ -250,11 +437,20 @@ MiscTab:AddToggle({
                     local excluded = {workspace:FindFirstChild("MAP"), workspace:FindFirstChild("NPCS"), workspace:FindFirstChild("NPC DAMAGE")}
                     for _, obj in ipairs(workspace:GetDescendants()) do
                         local isExcluded = false
-                        for _, f in ipairs(excluded) do if f and obj:IsDescendantOf(f) then isExcluded = true break end end
+                        for _, f in ipairs(excluded) do 
+                            if f and obj:IsDescendantOf(f) then 
+                                isExcluded = true 
+                                break 
+                            end 
+                        end
                         if not isExcluded then
-                            if obj:IsA("ClickDetector") then fireclickdetector(obj)
-                            elseif obj:IsA("ProximityPrompt") then fireproximityprompt(obj)
-                            elseif obj:IsA("TouchInterest") then firetouchinterest(hrp, obj.Parent, 0) end
+                            if obj:IsA("ClickDetector") then 
+                                fireclickdetector(obj)
+                            elseif obj:IsA("ProximityPrompt") then 
+                                fireproximityprompt(obj)
+                            elseif obj:IsA("TouchInterest") then 
+                                firetouchinterest(hrp, obj.Parent, 0) 
+                            end
                         end
                     end
                 end)
@@ -266,4 +462,6 @@ MiscTab:AddToggle({
 
 OrionLib:Init()
 
-print("JOUS MENU loaded! Auto Copy Armor đã được gắn vào tab War.")
+print("✅ JOUS MENU + KILL AURA FULL đã load!")
+print("🔥 Bật Kill Aura FULL để auto kill tất cả NPC + Boss")
+print("🎮 Tab Player có nút bật/tắt FPS HUD")
