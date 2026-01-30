@@ -366,7 +366,7 @@ MiscTab:AddButton({
     end
 })
 
--- Auto Nhặt Item TỐI ƯU (0.3s - không lag)
+-- Auto Nhặt Item TỐI ƯU (0.3s - không lag, không fire MAP/NPCS)
 MiscTab:AddToggle({
     Name = "🔄 Auto Nhặt Item (Tối ưu)",
     Default = false,
@@ -376,7 +376,7 @@ MiscTab:AddToggle({
         if state then
             OrionLib:MakeNotification({
                 Name = "Auto Collect",
-                Content = "ĐÃ BẬT - Nhặt ClickDetector (trừ MAP/NPCS)",
+                Content = "ĐÃ BẬT - Nhặt ClickDetector (không fire MAP/NPCS)",
                 Time = 3
             })
         end
@@ -389,27 +389,42 @@ MiscTab:AddToggle({
                     lastRun = now
                     
                     pcall(function()
-                        -- Lấy danh sách ClickDetector một lần
+                        -- Lấy các folder cần bỏ qua
+                        local mapFolder = workspace:FindFirstChild("MAP")
+                        local npcsFolder = workspace:FindFirstChild("NPCS")
+                        local npcDamageFolder = workspace:FindFirstChild("NPC DAMAGE")
+                        
+                        -- Lấy danh sách ClickDetector không thuộc MAP/NPCS
                         local detectors = {}
                         for _, obj in ipairs(workspace:GetDescendants()) do
                             if obj:IsA("ClickDetector") then
-                                local parent = obj.Parent
-                                if parent and parent.Parent then
-                                    local parentName = parent.Parent.Name
-                                    if parentName ~= "MAP" and parentName ~= "NPCS" and parentName ~= "NPC DAMAGE" then
-                                        table.insert(detectors, obj)
-                                    end
+                                -- Kiểm tra không thuộc MAP
+                                if mapFolder and obj:IsDescendantOf(mapFolder) then
+                                    continue
                                 end
+                                
+                                -- Kiểm tra không thuộc NPCS
+                                if npcsFolder and obj:IsDescendantOf(npcsFolder) then
+                                    continue
+                                end
+                                
+                                -- Kiểm tra không thuộc NPC DAMAGE
+                                if npcDamageFolder and obj:IsDescendantOf(npcDamageFolder) then
+                                    continue
+                                end
+                                
+                                -- Nếu không thuộc các folder cấm thì thêm vào list
+                                table.insert(detectors, obj)
                             end
                         end
                         
-                        -- Fire tất cả detector đã thu thập
+                        -- Fire tất cả detector hợp lệ
                         for _, detector in ipairs(detectors) do
                             pcall(fireclickdetector, detector)
                         end
                     end)
                 end
-                task.wait(0.1) -- Kiểm tra mỗi 0.1s
+                task.wait(0.1)
             end
         end)
     end
@@ -419,5 +434,5 @@ OrionLib:Init()
 
 print("✅ JOUS MENU + KILL AURA đã load!")
 print("🎯 Chọn NPC trong dropdown rồi bật Kill Aura")
-print("🔄 Auto nhặt item tối ưu 0.3s")
+print("🔄 Auto nhặt item tối ưu 0.3s (không fire MAP/NPCS)")
 print("🎮 Tab Player có nút bật/tắt FPS HUD")
