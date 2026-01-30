@@ -425,36 +425,51 @@ MiscTab:AddButton({
     end
 })
 
+-- Auto Nhặt Item SIÊU NHANH (ClickDetector Only) - ĐÃ TÍCH HỢP VÀO MENU
 MiscTab:AddToggle({
-    Name = "Auto Nhặt Item (100k)",
+    Name = "🔄 Auto Nhặt Item (ClickDetector)",
     Default = false,
     Callback = function(state)
-        getgenv().AutoCollect = state
+        getgenv().AutoCollectFast = state
+        
+        if state then
+            OrionLib:MakeNotification({
+                Name = "Auto Collect",
+                Content = "ĐÃ BẬT - Nhặt ClickDetector (trừ MAP/NPCS)",
+                Time = 3
+            })
+        end
+        
         task.spawn(function()
-            while getgenv().AutoCollect do
+            while getgenv().AutoCollectFast do
                 pcall(function()
-                    local hrp = game.Players.LocalPlayer.Character.HumanoidRootPart
-                    local excluded = {workspace:FindFirstChild("MAP"), workspace:FindFirstChild("NPCS"), workspace:FindFirstChild("NPC DAMAGE")}
+                    -- Kiểm tra các folder cần bỏ qua
+                    local mapFolder = workspace:FindFirstChild("MAP")
+                    local npcsFolder = workspace:FindFirstChild("NPCS")
+                    local npcDamageFolder = workspace:FindFirstChild("NPC DAMAGE")
+                    
+                    -- Duyệt qua tất cả ClickDetector trong workspace
                     for _, obj in ipairs(workspace:GetDescendants()) do
-                        local isExcluded = false
-                        for _, f in ipairs(excluded) do 
-                            if f and obj:IsDescendantOf(f) then 
-                                isExcluded = true 
-                                break 
-                            end 
-                        end
-                        if not isExcluded then
-                            if obj:IsA("ClickDetector") then 
+                        if obj:IsA("ClickDetector") then
+                            local isExcluded = false
+                            
+                            -- Kiểm tra không thuộc các folder bị cấm
+                            if mapFolder and obj:IsDescendantOf(mapFolder) then
+                                isExcluded = true
+                            elseif npcsFolder and obj:IsDescendantOf(npcsFolder) then
+                                isExcluded = true
+                            elseif npcDamageFolder and obj:IsDescendantOf(npcDamageFolder) then
+                                isExcluded = true
+                            end
+                            
+                            -- Nếu không bị cấm thì fire ClickDetector
+                            if not isExcluded then
                                 fireclickdetector(obj)
-                            elseif obj:IsA("ProximityPrompt") then 
-                                fireproximityprompt(obj)
-                            elseif obj:IsA("TouchInterest") then 
-                                firetouchinterest(hrp, obj.Parent, 0) 
                             end
                         end
                     end
                 end)
-                task.wait(0.5)
+                task.wait(0.05) -- Siêu nhanh
             end
         end)
     end
@@ -464,4 +479,5 @@ OrionLib:Init()
 
 print("✅ JOUS MENU + KILL AURA FULL đã load!")
 print("🔥 Bật Kill Aura FULL để auto kill tất cả NPC + Boss")
+print("🔄 Tab Misc có Auto Nhặt Item mới (ClickDetector Only)")
 print("🎮 Tab Player có nút bật/tắt FPS HUD")
