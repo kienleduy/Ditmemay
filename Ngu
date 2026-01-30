@@ -2,7 +2,7 @@ local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/jen
 local Window = OrionLib:MakeWindow({
     Name = "ALL-IN-ONE MENU 👺",
     HidePremium = true,
-    SaveConfig = true, -- Bật lưu cấu hình
+    SaveConfig = true,
     ConfigFolder = "SiuMenuSettings", 
     IntroEnabled = false
 })
@@ -246,17 +246,101 @@ MiscTab:AddButton({
 })
 
 MiscTab:AddSection({ Name = "⚙️ Others" })
+
+-- Toggle Auto Nhặt Item (phiên bản bạn yêu cầu, đã gắn)
 MiscTab:AddToggle({
-    Name = "Auto Nhặt Item (100k Stud)",
+    Name = "Auto Nhặt Item 100k Stud (Tránh MAP & NPCS)",
     Default = false,
     Callback = function(state)
         getgenv().AutoCollectItems = state
         task.spawn(function()
             while getgenv().AutoCollectItems do
                 safe(function()
-                    for _, obj in pairs(workspace:GetDescendants()) do
-                        if obj:IsA("ClickDetector") then fireclickdetector(obj)
-                        elseif obj:IsA("TouchInterest") then obj.Parent.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame end
+                    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    if not hrp then return end
+
+                    -- Exclude folders chính
+                    local excludedFolders = {
+                        workspace:FindFirstChild("MAP"),
+                        workspace:FindFirstChild("NPCS"),
+                        workspace:FindFirstChild("NPC DAMAGE")
+                    }
+
+                    -- Loop GetChildren (các object trực tiếp trong workspace)
+                    for _, obj in ipairs(workspace:GetChildren()) do
+                        local isExcluded = false
+                        for _, folder in ipairs(excludedFolders) do
+                            if folder and obj:IsDescendantOf(folder) then
+                                isExcluded = true
+                                break
+                            end
+                        end
+                        if isExcluded then continue end
+
+                        -- ClickDetector
+                        local cds = obj:GetDescendants()
+                        for _, cd in ipairs(cds) do
+                            if cd:IsA("ClickDetector") then
+                                local parentPart = cd.Parent
+                                if parentPart and parentPart:IsA("BasePart") then
+                                    local dist = (parentPart.Position - hrp.Position).Magnitude
+                                    if dist <= 100000 then
+                                        pcall(fireclickdetector, cd)
+                                    end
+                                end
+                            end
+                        end
+
+                        -- TouchInterest
+                        for _, touch in ipairs(cds) do
+                            if touch:IsA("TouchInterest") or touch:IsA("TouchTransmitter") then
+                                local touchPart = touch.Parent
+                                if touchPart and touchPart:IsA("BasePart") then
+                                    local dist = (touchPart.Position - hrp.Position).Magnitude
+                                    if dist <= 100000 then
+                                        pcall(function()
+                                            touchPart.CFrame = hrp.CFrame * CFrame.new(0, -3, 0)
+                                        end)
+                                    end
+                                end
+                            end
+                        end
+                    end
+
+                    -- Loop GetDescendants (nếu item nằm sâu trong folder khác, nhưng vẫn exclude MAP/NPCS)
+                    for _, obj in ipairs(workspace:GetDescendants()) do
+                        local isExcluded = false
+                        for _, folder in ipairs(excludedFolders) do
+                            if folder and obj:IsDescendantOf(folder) then
+                                isExcluded = true
+                                break
+                            end
+                        end
+                        if isExcluded then continue end
+
+                        if obj:IsA("ClickDetector") then
+                            local parentPart = obj.Parent
+                            if parentPart and parentPart:IsA("BasePart") then
+                                local dist = (parentPart.Position - hrp.Position).Magnitude
+                                if dist <= 100000 then
+                                    pcall(fireclickdetector, obj)
+                                end
+                            end
+                        elseif obj:IsA("TouchInterest") or obj:IsA("TouchTransmitter") then
+                            local touchPart = obj.Parent
+                            if touchPart and touchPart:IsA("BasePart") then
+                                local dist = (touchPart.Position - hrp.Position).Magnitude
+                                if dist <= 100000 then
+                                    pcall(function()
+                                        touchPart.CFrame = hrp.CFrame * CFrame.new(0, -3, 0)
+                                    end)
+                                end
+                            end
+                        elseif obj:IsA("ProximityPrompt") then
+                            pcall(function()
+                                fireproximityprompt(obj)
+                            end)
+                        end
                     end
                 end)
                 task.wait(0.3)
@@ -268,3 +352,5 @@ MiscTab:AddToggle({
 refreshTargetList()
 refreshQuestNPCList()
 OrionLib:Init()
+
+print("Menu loaded! Auto Nhặt Item đã được gắn - Tránh MAP & NPCS hoàn toàn.")
