@@ -391,7 +391,7 @@ MiscTab:AddToggle({
         
         task.spawn(function()
             while getgenv().AutoCollect do
-                task.wait(0.3)
+                task.wait(10)
                 
                 pcall(function()
                     -- Tạo list các folder CẤM
