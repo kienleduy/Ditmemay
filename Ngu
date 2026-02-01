@@ -348,32 +348,6 @@ FruitTab:AddButton({
     end
 })
 
--- [TAB MISC]
-local MiscTab = Window:MakeTab({Name = "Misc"})
-
-MiscTab:AddButton({
-    Name = "STORE AND EAT 🍎",
-    Callback = function()
-        pcall(function()
-            local Save = game:GetService("ReplicatedStorage"):WaitForChild("Save")
-            
-            -- STORE cả 2 (melee và sword)
-            Save:WaitForChild("SavingMelee"):FireServer(-5)
-            Save:WaitForChild("SavingSword"):FireServer(-5)
-            
-            task.wait(0.2) -- Đợi 0.2s sau khi store xong
-            
-            -- Rồi mới EAT các item
-            for _, Name in pairs({"BOXGUI", "ArmorBox", "DFGUI", "BOOKGUI"}) do
-                local Gui = game.Players.LocalPlayer.PlayerGui:FindFirstChild(Name)
-                if Gui and Gui.Frame:FindFirstChild("Sure") and Gui.Frame.Sure:FindFirstChild("EatScript") then
-                    Gui.Frame.Sure.EatScript.Eat:FireServer()
-                end
-            end
-        end)
-    end
-})
-
 -- Auto Nhặt Item CHÍNH XÁC (2s - không fire MAP/NPCS/Map-Islands)
 MiscTab:AddToggle({
     Name = "🔄 Auto Nhặt Item (Tối ưu)",
