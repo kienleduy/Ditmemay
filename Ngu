@@ -293,7 +293,7 @@ WarTab:AddToggle({
         
         task.spawn(function()
             while getgenv().AutoArmor do
-                task.wait(0.3)
+                task.wait(0.2)
                 pcall(function()
                     for _, descendant in pairs(game.Players:GetDescendants()) do
                         if descendant:IsA("RemoteEvent")
@@ -374,7 +374,7 @@ MiscTab:AddButton({
     end
 })
 
--- Auto Nhặt Item CHÍNH XÁC (0.3s - không fire MAP/NPCS/Map-Islands)
+-- Auto Nhặt Item CHÍNH XÁC (2s - không fire MAP/NPCS/Map-Islands)
 MiscTab:AddToggle({
     Name = "🔄 Auto Nhặt Item (Tối ưu)",
     Default = false,
@@ -391,7 +391,7 @@ MiscTab:AddToggle({
         
         task.spawn(function()
             while getgenv().AutoCollect do
-                task.wait(10)
+                task.wait(2)
                 
                 pcall(function()
                     -- Tạo list các folder CẤM
